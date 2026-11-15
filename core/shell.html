@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{TITLE}}</title>
+<style>
+{{CSS}}
+</style>
+</head>
+<body>
+
+<!-- LADEN -->
+<section id="loading" class="screen">
+  <div class="loadbox"><div class="hero" id="loadHero"></div><p class="sub" id="loadMsg">Einen Moment …</p></div>
+</section>
+
+<!-- LEARNINGVIEW: KLASSENÜBERSICHT (Lehrkraft) -->
+<section id="lvclass" class="screen">
+  <div class="lvhead"><h2 id="lvTitle"></h2>
+    <div class="lvbtns"><button class="smallbtn big" id="lvRefresh">Aktualisieren</button><button class="smallbtn big" id="lvBoard">Tafel</button></div></div>
+  <p class="lvmsg" id="lvMsg" hidden></p>
+  <div class="lvwrap" id="lvTable"></div>
+  <p class="lvnote">Sterne = bester Durchgang je Mission. „Hilfe genutzt“ und „Lösung gezeigt“ zählen Aufgaben (ohne Wiederholungen am Ende). Schiene: Sterne stehen in der ersten Stufen-Spalte.</p>
+</section>
+
+<!-- LEARNINGVIEW: LERNSTAND EINER PERSON (nur lesen) -->
+<section id="lvreview" class="screen">
+  <div class="lvhead"><h2>Lernstand · nur lesen</h2><span class="lvbadge" id="rvReached"></span></div>
+  <p class="lvmsg info" id="rvStats"></p>
+  <div class="lvwrap" id="rvTable"></div>
+  <p class="lvnote" id="rvFlags"></p>
+</section>
+
+<!-- START -->
+<section id="start" class="screen on">
+  <div style="text-align:center">
+    <div class="hero" id="hero"></div>
+    <h1 id="appTitle"></h1>
+    <p class="sub" id="appSub"></p>
+  </div>
+  <div class="startgrid" id="levels"></div>
+  <div class="foot">
+    <div><button class="smallbtn" id="toBoard">Tafel</button><div class="lvstat" id="lvstat"></div></div>
+    <div style="text-align:right">
+      <button class="smallbtn" id="infoBtn">Info</button>
+      <div class="ki" id="ki" style="margin-top:6px"></div>
+    </div>
+  </div>
+</section>
+
+<!-- MISSIONEN EINER STUFE -->
+<section id="map" class="screen">
+  <div class="top">
+    <button class="iconbtn" data-go="start" aria-label="Zurück"></button>
+    <div class="marks" id="mapMarks"></div>
+    <div class="starcount"><span class="st"></span><span id="mapStars">0</span></div>
+  </div>
+  <div class="goal card" id="goal"></div>
+  <div class="missions" id="missions"></div>
+  <div class="shelf card">
+    <div id="slots" style="display:flex;gap:10px;flex-wrap:wrap"></div>
+    <div class="crown" id="crown"><span class="cr"></span><span id="crownLabel"></span></div>
+  </div>
+</section>
+
+<!-- AUFGABE -->
+<section id="task" class="screen">
+  <div class="top">
+    <button class="iconbtn" id="taskBack" aria-label="Zurück"></button>
+    <div class="pdots" id="pdots"></div>
+    <div class="starcount"><span class="st"></span><span id="taskStars">0</span></div>
+  </div>
+  <div class="prompt card" id="prompt"></div>
+  <div class="stage">
+    <div class="show card" id="show"></div>
+    <div class="answers" id="answers"></div>
+  </div>
+  <div class="fb" id="fb"></div>
+</section>
+
+<!-- FREISCHALT-CODE -->
+<section id="code" class="screen">
+  <div class="top">
+    <button class="iconbtn" id="codeBack" aria-label="Zurück"></button>
+    <div class="prompt card" style="margin:0;flex:1"><span class="lockbig"></span><span class="ptext" id="codeTitle"></span></div>
+  </div>
+  <div class="codeslots" id="codeSlots"></div>
+  <div class="codekeys" id="codeKeys"></div>
+  <div style="display:flex;justify-content:center;margin-top:14px"><button class="smallbtn" id="codeClear">Nochmal</button></div>
+</section>
+
+<!-- MISSION GESCHAFFT -->
+<section id="done" class="screen">
+  <div class="donebox card">
+    <div id="doneBadge"></div>
+    <h2>Geschafft!</h2>
+    <div class="starcount" style="justify-content:center;margin:0 auto 18px;width:max-content"><span class="st"></span><span id="doneStars">0</span></div>
+    <div id="doneUnlock"></div>
+    <button class="next" style="margin:0 auto" data-go="map" id="doneNext"></button>
+  </div>
+</section>
+
+<!-- TAFEL -->
+<section id="board" class="screen">
+  <div class="top" style="flex-wrap:wrap">
+    <button class="iconbtn" data-go="start" aria-label="Zurück"></button>
+    <div class="decks" id="decks"></div>
+    <div class="score" style="margin-left:auto">
+      <div class="team k">Klasse <b id="sK">0</b></div>
+      <div class="team l">Lehrkraft <b id="sL">0</b></div>
+    </div>
+  </div>
+  <div class="stage">
+    <div class="bshow card" id="bshow"></div>
+    <div class="bctrl">
+      <button class="ctl" id="bReveal">Lösung zeigen</button>
+      <button class="ctl k" id="bK">+1 Klasse</button>
+      <button class="ctl l" id="bL">+1 Lehrkraft</button>
+      <button class="ctl" id="bNext">Nächste Karte</button>
+      <button class="ctl" id="bReset" style="font-size:16px;font-weight:600;color:var(--muted)">Punkte auf 0</button>
+    </div>
+  </div>
+</section>
+
+<!-- LEHRKRAFT-BEREICH -->
+<div id="info" class="overlay" hidden>
+ <div class="panel">
+  <div class="phead"><h3 id="infoTitle"></h3><button class="smallbtn big" id="closeInfo">Schließen</button></div>
+  <section class="teach">
+    <div id="teachLock">
+      <p class="lockline"><span class="lockbig"></span><b>Lehrkraft-Code</b></p>
+      <div class="pinshow" id="pinShow"></div>
+      <div class="pinpad" id="pinPad"></div>
+    </div>
+    <div id="teachOpen" hidden>
+      <div id="switches"></div>
+      <div class="resetrow"><button class="smallbtn" id="resetAll">Fortschritt löschen</button><button class="smallbtn danger" id="resetYes" hidden>Ja, wirklich löschen</button></div>
+      <div class="toast" id="toast"></div>
+      <p class="lvstore" id="lvStore"></p>
+    </div>
+  </section>
+  <details class="infotext"><summary>Erklärung der App</summary><div id="infoBody"></div></details>
+ </div>
+</div>
+
+<canvas id="confetti"></canvas>
+
+<script>
+{{SIGNS}}
+</script>
+<script>
+{{JS}}
+</script>
+</body>
+</html>
