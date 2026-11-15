@@ -1,0 +1,9 @@
+# gebaute Apps (enthalten Lehrkraft-Code und ggf. lizenzierte Gebärdenbilder)
+dist/
+*.html.local
+# lokale Gebärden-Ordner und private Einstellungen
+gebaerden/
+signs/
+*.local.json
+__pycache__/
+.DS_Store
