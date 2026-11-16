@@ -7,6 +7,7 @@ function levelName(l) { const L = levelDef(l); return ((L.marks ? L.marks + " " 
 function sumStats(st, levels) { const r = { n: 0, first: 0, hint: 0, sol: 0 }; levels.forEach(l => { const x = (st.stats || {})[l]; if (x) for (const k in r) r[k] += x[k] || 0; }); return r; }
 function levelsOf(st) { return (st.track && APP.track) ? [APP.track.id] : ORDER(); }
 function reachedText(st) {
+  if (APP.reached) return String(APP.reached(st)); /* eigener Text für die Spalte „Stand“ (nur Text, kein HTML) */
   if (st.track && APP.track) return APP.track.label;
   const o = st.opened || {}, ord = ORDER(); let t = levelName(ord[0]);
   ord.forEach(l => { if (o[l]) t = levelName(l); });

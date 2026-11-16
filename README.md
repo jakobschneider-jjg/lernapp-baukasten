@@ -104,6 +104,14 @@ const APP = {
 };
 ```
 
+Haken für Apps mit eigenem Aufbau (alle optional, Beispiel: `apps/weihnachten-im-stall`):
+
+* `parallel: true` – Stufen sind Niveaus nebeneinander (keine Sterne-Sperre zwischen den Stufen).
+* `renderStart(el)` – eigene Startseite (z. B. Kalender) statt der Stufen-Knöpfe.
+* `route(id)` / `onScreen(id)` – Bildschirmwechsel umleiten (z. B. `"map"` auf einen eigenen Bildschirm) und eigene Bildschirme zeichnen.
+* `score(S)` – eigener Kachel-Wert (0–1); `reached(S)` – eigener Text in der Spalte „Stand“ der Klassenübersicht.
+* `teacher: { html(), wire(root), render(root) }` – eigene Schalter im Lehrkraft-Bereich; `unlockAllLabel`, `keepOnReset: ["level"]`.
+
 ### Aufgabe
 
 ```js

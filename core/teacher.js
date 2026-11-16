@@ -10,14 +10,16 @@ const TEACH_CODE = "__TEACH_CODE__";
 let pin = "";
 function switchHTML(id, label) { return '<button class="switch" id="' + id + '"><span class="sw"><i></i></span><span class="lbl">' + label + '</span></button>'; }
 function buildTeacher() {
-  let h = switchHTML("swAll", "Alle Stufen öffnen");
+  let h = switchHTML("swAll", APP.unlockAllLabel || "Alle Stufen öffnen");
+  if (APP.teacher && APP.teacher.html) h += '<div id="appTeach">' + APP.teacher.html() + '</div>'; /* eigene Schalter der App */
   Object.entries(APP.locks || {}).forEach(([id, L]) => { h += switchHTML("swLock_" + id, L.switchLabel || (L.label + " öffnen")); });
   if (APP.track) h += switchHTML("swTrack", APP.track.switchLabel || (APP.track.label + " auf diesem Gerät"));
   $("switches").innerHTML = h;
   /* Codes zum Zeigen an der Tafel (nur nach Lehrkraft-Code sichtbar) */
   const lc = Object.entries(APP.locks || {});
   $("lockCodes").innerHTML = lc.length ? '<p class="lchead">' + ICON.key + 'Codes für die Tafel</p>' + lc.map(([id, L]) => '<div class="lcrow"><span class="lclabel">' + L.label + '</span><span class="lckeys">' + L.code.map(k => '<span class="lckey">' + keyHTML(L, k) + '</span>').join("") + '</span></div>').join("") : "";
-  $("swAll").addEventListener("click", () => { S.unlockAll = !S.unlockAll; save(); renderSwitches(); toast(S.unlockAll ? "Alle Stufen sind offen." : "Stufen wieder gesperrt."); });
+  $("swAll").addEventListener("click", () => { S.unlockAll = !S.unlockAll; save(); renderSwitches(); toast(APP.unlockAllLabel ? (S.unlockAll ? "Alles offen." : "Wieder gesperrt.") : (S.unlockAll ? "Alle Stufen sind offen." : "Stufen wieder gesperrt.")); });
+  if (APP.teacher && APP.teacher.wire) APP.teacher.wire($("appTeach"));
   Object.entries(APP.locks || {}).forEach(([id, L]) => $("swLock_" + id).addEventListener("click", () => {
     S.locksOpen[id] = !S.locksOpen[id]; save(); renderSwitches(); toast(S.locksOpen[id] ? L.label + ": offen." : L.label + ": wieder gesperrt.");
   }));
@@ -39,7 +41,7 @@ function buildTeacher() {
   $("closeInfo").addEventListener("click", closeInfo);
   $("resetAll").addEventListener("click", () => { $("resetYes").hidden = false; });
   $("resetYes").addEventListener("click", () => {
-    const tr = S.track; applyState({ track: tr }); save(); sendScore(); $("resetYes").hidden = true; renderSwitches(); toast("Fortschritt gelöscht.");
+    const keep = { track: S.track }; (APP.keepOnReset || []).forEach(k => { keep[k] = S[k]; }); applyState(keep); save(); sendScore(); $("resetYes").hidden = true; renderSwitches(); toast("Fortschritt gelöscht.");
   });
   $("infoTitle").textContent = APP.title + " · Lehrkraft";
   $("infoBody").innerHTML = (APP.info || "") + GENERIC_INFO;
@@ -53,6 +55,7 @@ function renderSwitches() {
   $("swAll").classList.toggle("on", !!S.unlockAll);
   Object.keys(APP.locks || {}).forEach(id => $("swLock_" + id).classList.toggle("on", !!S.locksOpen[id]));
   if (APP.track) $("swTrack").classList.toggle("on", !!S.track);
+  if (APP.teacher && APP.teacher.render) APP.teacher.render($("appTeach"));
 }
 function openInfo() { $("lvStore").textContent = lvStorageText(); pin = ""; $("teachLock").hidden = false; $("teachOpen").hidden = true; $("resetYes").hidden = true; $("toast").textContent = ""; renderPin(); $("info").hidden = false; }
 function closeInfo() { $("info").hidden = true; go(document.querySelector(".screen.on").id === "map" ? "map" : "start"); }
