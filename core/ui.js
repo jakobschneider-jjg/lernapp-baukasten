@@ -12,10 +12,16 @@ function pct(a, b) { return b ? Math.round(a / b * 100) + " %" : "–"; }
 /* Gebärdenbild aus der beim Bauen eingebetteten Tabelle SIGNS; fehlt es, ein Platzhalter mit dem Wort.
    Im Inhalt immer als sign('WORT') schreiben: build.py sucht genau dieses Muster. */
 function sign(word, cls) {
+  if (typeof SIGNS_OFF !== "undefined" && SIGNS_OFF) return "";
   const src = (typeof SIGNS !== "undefined") && SIGNS[word];
   return src ? '<img' + (cls ? ' class="' + cls + '"' : '') + ' src="' + src + '" alt="Gebärde ' + word + '">'
              : '<span class="signph' + (cls ? ' ' + cls : '') + '">[Gebärde: ' + word + ']</span>';
 }
+
+/* Eingebettetes App-Bild (build.py --images); "" wenn nicht vorhanden → App zeigt eigene Zeichnung.
+   Im Inhalt immer als imgSrc('NAME') schreiben: build.py sucht genau dieses Muster. */
+function imgSrc(name) { return (typeof IMAGES !== "undefined" && IMAGES[name]) || ""; }
+const hasSigns = () => typeof SIGNS !== "undefined" && Object.keys(SIGNS).length > 0 && !(typeof SIGNS_OFF !== "undefined" && SIGNS_OFF);
 
 const ICON = {
   back: '<svg viewBox="0 0 24 24" fill="none" stroke="#1b2636" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',

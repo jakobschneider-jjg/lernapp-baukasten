@@ -1,11 +1,12 @@
 /* ==========================================================================
-   RHYTHMUS-BAUKASTEN – Tiernotation → Trommelraster (Bibi Kl. 3, Rhythmik)
+   RHYTHMUS-TRAINER – Tiernotation → Trommelraster (Bibi Kl. 3, Rhythmik)
    Lehrplan: rh-34-2 (Trommelschule: Bass/Slap), rh-34-3 (Notationssymbole erkennen und umsetzen)
    Ein Kästchen = eine Zählzeit. Jedes Tier füllt genau ein Kästchen:
      Bär = 1 Schlag, Löwe = 2, Klapperschlange = 4.
    Trommelraster: 8 Spalten (1 + 2 + 3 + 4 +), Zeilen Bass / Slap / Tap; rot = rechts, blau = links.
    Stufe 3: Hand auf dem Fell (Zeile 1, rot) + Stick am Rand (Zeile 2, blau).
-   Tier-Symbole: eigene Zeichnungen (keine Worksheet-Crafter-Bilder).
+   Tier-Symbole: eigene Zeichnungen. Klassen-Fassung: Worksheet-Crafter-Bilder (Erlaubnis Nov. 2026) nur lokal über
+   build.py --images; die Fassung zum Weitergeben ohne --images und mit --no-signs bauen.
    ========================================================================== */
 
 /* ---------- Tiere ---------- */
@@ -19,6 +20,10 @@ const ANIMAL_SVG = {
   l: '<g stroke="#6b3a10" stroke-width="4" stroke-linejoin="round"><circle cx="50" cy="50" r="42" fill="#d9822b"/><circle cx="31" cy="33" r="8" fill="#f2c063"/><circle cx="69" cy="33" r="8" fill="#f2c063"/><circle cx="50" cy="55" r="26" fill="#f2c063"/></g><circle cx="41" cy="50" r="3.4" fill="#1b1b1b"/><circle cx="59" cy="50" r="3.4" fill="#1b1b1b"/><path d="M43 60 L57 60 L50 67 Z" fill="#6b3a10"/><path d="M50 67 Q45 74 39 70 M50 67 Q55 74 61 70" fill="none" stroke="#6b3a10" stroke-width="3" stroke-linecap="round"/>',
   s: '<path d="M24 86 L68 86 C92 86 92 64 66 64 C38 64 34 50 44 40 C52 31 58 27 54 17" fill="none" stroke="#24451f" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 86 L68 86 C92 86 92 64 66 64 C38 64 34 50 44 40 C52 31 58 27 54 17" fill="none" stroke="#5fae4c" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/><g stroke="#6b5a2a" stroke-width="3"><ellipse cx="17" cy="86" rx="5" ry="7" fill="#ead6a4"/><ellipse cx="9" cy="86" rx="4.5" ry="6" fill="#ead6a4"/></g><ellipse cx="55" cy="14" rx="11" ry="8.5" fill="#5fae4c" stroke="#24451f" stroke-width="4"/><circle cx="59" cy="11" r="2.4" fill="#1b1b1b"/><path d="M66 15 L76 12 M66 15 L76 19" stroke="#d1262c" stroke-width="2.6" stroke-linecap="round"/>'
 };
+/* Klassen-Fassung: lizenzierte Tierbilder (build.py --images) ersetzen die eigenen Zeichnungen überall (100er-Raster) */
+const TIER_IMG = { b: imgSrc("BAER"), l: imgSrc("LOEWE"), s: imgSrc("KLAPPERSCHLANGE") };
+const HAS_TIER_IMG = !!(TIER_IMG.b && TIER_IMG.l && TIER_IMG.s);
+if (HAS_TIER_IMG) Object.keys(TIER_IMG).forEach(k => { ANIMAL_SVG[k] = '<image href="' + TIER_IMG[k] + '" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>'; });
 const animal = (k, cls) => '<svg class="tier ' + (cls || "") + '" viewBox="0 0 100 100" aria-label="' + TIERE[k].name + '">' + ANIMAL_SVG[k] + '</svg>';
 const PAUKE_SVG = '<ellipse cx="100" cy="92" rx="78" ry="26" fill="#f6efe2" stroke="#1b2636" stroke-width="6"/><path d="M22 92 C26 150 60 176 100 176 C140 176 174 150 178 92" fill="#c9733a" stroke="#1b2636" stroke-width="6"/><path d="M40 160 L28 196 M160 160 L172 196 M100 176 L100 198" stroke="#1b2636" stroke-width="6" stroke-linecap="round"/>';
 const HAND_PATH = '<path d="M-7 9 C-12 3 -13 -3 -11 -6 C-9 -8 -7 -6 -6 -3 L-6 -14 C-6 -17 -2 -17 -2 -14 L-2 -6 L-2 -17 C-2 -20 2 -20 2 -17 L2 -6 L2 -15 C2 -18 6 -18 6 -15 L6 -5 L6 -11 C6 -14 10 -14 10 -11 L10 4 C10 10 6 14 0 14 C-3 14 -5 12 -7 9 Z" fill="#fff" stroke="#1b2636" stroke-width="1.6" stroke-linejoin="round"/>';
@@ -442,9 +447,9 @@ const KARTE_ICON = () => '<rect x="20" y="30" width="160" height="140" rx="14" f
 /* ---------- App ---------- */
 const APP = {
   id: "rhythmus-baukasten",
-  title: "Rhythmus-Baukasten",
+  title: "Rhythmus-Trainer",
   subtitle: "Bär, Löwe, Klapperschlange – und die Trommel.",
-  credit: "mit KI erstellt · geprüft: J. Schneider · Tier-Symbole: eigene Zeichnungen · Gebärdenbilder: © Verlag Karin Kestner, kestner.app",
+  credit: "mit KI erstellt · geprüft: J. Schneider · " + (HAS_TIER_IMG ? "Tierbilder: Material mit freundlicher Genehmigung von www.worksheetcrafter.com" : "Tier-Symbole: eigene Zeichnungen") + (hasSigns() ? " · Gebärdenbilder: © Verlag Karin Kestner, kestner.app" : ""),
   crownLabel: "Rhythmus-Profi",
   hero: () => '<svg viewBox="0 0 420 120" style="width:min(100%,420px)"><g transform="translate(10 10)">' + ANIMAL_SVG.b + '</g><g transform="translate(120 10)">' + ANIMAL_SVG.l + '</g><g transform="translate(230 10)">' + ANIMAL_SVG.s + '</g><g transform="translate(330 8) scale(.52)">' + PAUKE_SVG + '</g></svg>',
   unlockShare: 0.7,

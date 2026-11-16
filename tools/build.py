@@ -11,6 +11,8 @@ Aufruf:
            Wörter, die im Inhalt als sign('WORT') oder als Feld sign: "WORT" vorkommen. Lizenzierte Bilder (z. B. Kestner)
            gehören NIE ins Repository; dist/ ist deshalb in .gitignore.
   --out    Zieldatei (Standard: dist/<app-id>.html)
+  --images Lokaler Ordner mit lizenzierten App-Bildern (NAME.png); eingebettet für imgSrc('NAME'). Nie ins Repository.
+  --no-signs  Gebärdenfelder ganz weglassen (Fassung zum Weitergeben ohne lizenzierte Gebärdenbilder)
 
 Prüfungen: alle Platzhalter ersetzt, Syntaxprüfung mit node --check, fehlende Gebärden werden gemeldet.
 """
@@ -40,6 +42,17 @@ def sign_data(path, max_w=360, max_h=270, q=72):
         return "data:%s;base64,%s" % (mime, base64.b64encode(open(path, "rb").read()).decode())
 
 
+def image_data(path, max_side=320):
+    """App-Bild als PNG (Transparenz bleibt) verkleinern und als Daten-URI zurückgeben."""
+    try:
+        from PIL import Image
+        im = Image.open(path).convert("RGBA")
+        im.thumbnail((max_side, max_side))
+        b = io.BytesIO(); im.save(b, "PNG", optimize=True)
+        return "data:image/png;base64," + base64.b64encode(b.getvalue()).decode()
+    except ImportError:
+        return "data:image/png;base64," + base64.b64encode(open(path, "rb").read()).decode()
+
 def find_sign(folder, word):
     for name in os.listdir(folder):
         stem, ext = os.path.splitext(name)
@@ -54,6 +67,8 @@ def main():
     ap.add_argument("--code", help="Lehrkraft-Code (Ziffern)")
     ap.add_argument("--signs", help="lokaler Ordner mit Gebärdenbildern")
     ap.add_argument("--out", help="Zieldatei")
+    ap.add_argument("--images", help="lokaler Ordner mit lizenzierten App-Bildern (NAME.png), eingebettet für imgSrc('NAME')")
+    ap.add_argument("--no-signs", action="store_true", help="Gebärdenfelder ganz weglassen (z. B. Fassung zum Weitergeben)")
     a = ap.parse_args()
 
     app_dir = os.path.abspath(a.app)
@@ -97,7 +112,18 @@ def main():
             else: missing.append(w)
     else:
         missing = words
-    signs_js = "const SIGNS=" + json.dumps(signs, ensure_ascii=False) + ";"
+    if a.no_signs:
+        signs, missing = {}, []
+    # App-Bilder (z. B. lizenzierte Illustrationen): imgSrc('NAME') im Inhalt; PNG mit Transparenz, max. 320 px
+    inames = sorted(set(re.findall(r"imgSrc\(\s*[\"']([A-Z0-9_ÄÖÜ]+)[\"']", scan)))
+    images, imissing = {}, []
+    if a.images:
+        folder = os.path.expanduser(a.images)
+        for w in inames:
+            p = find_sign(folder, w)
+            if p: images[w] = image_data(p)
+            else: imissing.append(w)
+    signs_js = "const SIGNS=" + json.dumps(signs, ensure_ascii=False) + ";const SIGNS_OFF=" + ("true" if a.no_signs else "false") + ";const IMAGES=" + json.dumps(images, ensure_ascii=False) + ";"
 
     html = read(os.path.join(ROOT, "core", "shell.html"))
     for k, v in (("{{TITLE}}", title), ("{{CSS}}", css), ("{{SIGNS}}", signs_js), ("{{JS}}", js)):
@@ -122,7 +148,9 @@ def main():
     with open(out, "w", encoding="utf-8") as f:
         f.write(html)
     print("Gebaut:", out, "(%d KB)" % (len(html.encode()) // 1024))
-    print("Gebärden eingebettet: %d · Platzhalter: %d%s" % (len(signs), len(missing), (" (" + ", ".join(missing) + ")") if missing else ""))
+    print("Gebärden eingebettet: %d · Platzhalter: %d%s" % (len(signs), len(missing), (" (" + ", ".join(missing) + ")") if missing else "") + (" · Gebärdenfelder aus" if a.no_signs else ""))
+    if a.images or inames:
+        print("App-Bilder eingebettet: %d%s" % (len(images), (" · fehlen: " + ", ".join(imissing)) if imissing else "") + ("" if a.images else " (ohne --images: eigene Zeichnungen)"))
 
 
 if __name__ == "__main__":
