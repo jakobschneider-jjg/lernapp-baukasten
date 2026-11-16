@@ -22,6 +22,19 @@ Neue Erfahrungen hier ergänzen – mit Datum und Quelle (z. B. „Reflexion Geo
    (`--signs`), nie ins Repository.
 9. **Tafel-Showdown** für den gemeinsamen Einstieg/Abschluss: ohne Hilfen, Klasse gegen Lehrkraft.
 10. Wirkung jeder neuen Hilfeform in der Reflexion abfragen und hier festhalten.
+11. **Hilfen innerhalb einer Mission zurücknehmen**, wenn eine Fertigkeit neu ist (Beispiel Rhythmus, Mission „Puls“):
+    vorspielen + Schlag-Blitz → nur Blitz → nur Puls-Licht → ohne Licht. Einstiegsmissionen gestuft schwerer machen
+    (erst ein neues Element, dann zwei, dann frei). (Rückmeldung Jakob, Nov. 2026: Einstieg ins Mitspielen war zu schwer.)
+12. **Belohnungen ohne Sog-Mechanik** (Prüfung Nov. 2026 mit Radesky et al. 2022, JAMA Netw Open, und Deci/Koestner/Ryan 1999,
+    Psychol Bull): keine Zufallsbelohnungen, keine Tages- oder Serien-Belohnungen, kein Zeitdruck, nichts, was man verlieren kann,
+    keine Ranglisten zwischen Kindern. Erwartete, leistungsabhängige Belohnungen sparsam: z. B. Super-Sticker nur einmal pro Mission,
+    frei gewählt aus festen Motiven; Wiederholen bleibt möglich, bringt aber nichts Zusätzliches. Rückmeldung über das Können
+    („Das kann ich“-Karte) statt zusätzlicher Belohnungsebenen; nicht mehrere Sammel-Systeme nebeneinander (Abzeichen-Regal ausblenden,
+    wenn eine Karte es ersetzt). Nach einer Mission startet nichts von selbst.
+13. **Mitspielen im Takt** (Tippen auf eine Bildschirm-Trommel) nur mit großzügiger Toleranz (Rhythmus-App: 45 % des Abstands zum
+    Nachbarschlag, 90–230 ms, höchstens 1 Extra-Schlag), Einzählen sichtbar 1–4, Tempo eher etwas schneller als „ganz langsam“
+    (Rückmeldung Jakob: ca. 57 statt 50 Schläge pro Minute spielt sich besser). Echtes Trommeln/Klatschen kann die App nicht prüfen –
+    deshalb zusätzlich ungeprüfte „Spiel mit!“-Runden anbieten.
 
 ## Technik
 
@@ -37,9 +50,17 @@ Neue Erfahrungen hier ergänzen – mit Datum und Quelle (z. B. „Reflexion Geo
    Namen nur per `textContent`.
 8. Vorschau, Einzelansicht und Klassenansicht speichern nie.
 9. Vor der Weitergabe: `./run_all.sh` bzw. eigene Tests + Tap-Test auf dem iPad.
+10. **Ton auf dem iPad:** Safari gibt Web-Audio erst nach einer Berührung frei – den Audio-Kontext bei jedem `pointerdown` wecken.
+    Alles muss auch ohne Ton verständlich sein.
+11. **Bilder aus Worksheet Crafter nicht in Apps einbauen:** Die Nutzungsbedingungen erlauben die Weitergabe außerhalb des Programms
+    nur als PDF oder Video und schließen selbst gebaute interaktive Übungen aus (Stand Nov. 2026). Eigene Symbole zeichnen oder
+    eine Erlaubnis einholen. Lizenzierte Bilder (auch Kestner) nur über `--signs`/lokale Ordner, nie ins Repository.
+12. **Tests mit Zeitablauf** (Vorspielen, Mitspielen): auf das tatsächliche Ende der Runde warten, nicht auf eine sichtbare Meldung;
+    Overlays nach einer Mission (z. B. Sticker-Auswahl) im Test bedienen.
 
 ## Offene Fragen (bitte bei Gelegenheit testen)
 
-* Bleiben Lernstände erhalten, wenn an derselben LearningView-Aufgabe eine **neue HTML-Version** angehängt wird?
-  (Bis dahin: neue Version nur zwischen zwei Reihen austauschen.)
+* ~~Bleiben Lernstände erhalten, wenn an derselben LearningView-Aufgabe eine neue HTML-Version angehängt wird?~~
+  **Geklärt (15.11.2026, Test durch Jakob mit Testschüler):** Ja. `APP.id` nicht ändern und das Zustandsformat
+  abwärtskompatibel halten (neue Stufen, Missionen und Felder ergänzen ist unkritisch); nach dem Austausch neu freigeben.
 * Was ermöglicht `DOWNLOADFILE|` in LearningView (z. B. Urkunde als Datei)?

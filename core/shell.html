@@ -40,6 +40,7 @@
     <p class="sub" id="appSub"></p>
   </div>
   <div class="startgrid" id="levels"></div>
+  <div class="extras" id="extras"></div>
   <div class="foot">
     <div><button class="smallbtn" id="toBoard">Tafel</button><div class="lvstat" id="lvstat"></div></div>
     <div style="text-align:right">
@@ -77,6 +78,15 @@
     <div class="answers" id="answers"></div>
   </div>
   <div class="fb" id="fb"></div>
+</section>
+
+<!-- EXTRA-BEREICH (APP.extras) -->
+<section id="extra" class="screen">
+  <div class="top">
+    <button class="iconbtn" data-go="start" aria-label="Zurück"></button>
+    <div class="prompt card" style="margin:0;flex:1"><span class="ptext" id="extraTitle"></span></div>
+  </div>
+  <div id="extraBody"></div>
 </section>
 
 <!-- FREISCHALT-CODE -->
@@ -135,6 +145,7 @@
     </div>
     <div id="teachOpen" hidden>
       <div id="switches"></div>
+      <div class="lockcodes" id="lockCodes"></div>
       <div class="resetrow"><button class="smallbtn" id="resetAll">Fortschritt löschen</button><button class="smallbtn danger" id="resetYes" hidden>Ja, wirklich löschen</button></div>
       <div class="toast" id="toast"></div>
       <p class="lvstore" id="lvStore"></p>

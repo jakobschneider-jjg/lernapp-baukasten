@@ -24,10 +24,14 @@ function isLocked(mid) { const id = lockOf(mid); return !!(id && !S.locksOpen[id
 /* nächste Stufe öffnet sich mit Anteil der Sterne der vorigen (nur zugängliche Missionen zählen) */
 function levelTotal(l) { return levelDef(l).missions.filter(m => !isLocked(m)).reduce((a, m) => a + sizeOf(l, m), 0); }
 function need(l) { return Math.ceil(levelTotal(l) * (APP.unlockShare || 0.7)); }
+/* Stufe mit Code-Sperre (levels[i].lock = Schlüssel aus APP.locks): öffnet sich erst, wenn Sterne UND Code da sind */
+function levelCodeOk(l) { const L = levelDef(l); return !L || !L.lock || !!S.locksOpen[L.lock]; }
+function starsOk(l) { const o = ORDER(), i = o.indexOf(l); if (i <= 0) return true; const prev = o[i - 1]; return unlocked(prev) && totalStars(prev) >= need(prev); }
+function codeWaiting(l) { return !unlocked(l) && starsOk(l) && !levelCodeOk(l); }
 function unlocked(l) {
   const o = ORDER(), i = o.indexOf(l); if (i <= 0 || S.unlockAll) return true;
   if (S.opened[l]) return true;
-  const prev = o[i - 1], ok = unlocked(prev) && totalStars(prev) >= need(prev);
+  const ok = starsOk(l) && levelCodeOk(l);
   if (ok) { S.opened[l] = true; save(); } return ok;
 }
 function scoreScaled() {
@@ -48,6 +52,7 @@ function renderStart() {
   document.body.classList.toggle("trackmode", trackOn);
   $("appTitle").textContent = APP.title; $("appSub").textContent = APP.subtitle || "";
   $("hero").innerHTML = APP.hero ? APP.hero() : "";
+  renderExtras(trackOn);
   if (trackOn) {
     const T = APP.track;
     $("levels").innerHTML = '<button class="levelbtn card trackbtn" data-l="' + T.id + '">' + (T.startHTML ? T.startHTML() : '<span class="marks">' + (T.marks || "") + '</span>' + T.label) + '<span class="lvinfo"><span class="sti">' + ICON.star + '</span>' + totalStars(T.id) + '</span></button>';
@@ -56,13 +61,17 @@ function renderStart() {
   }
   const o = ORDER();
   $("levels").innerHTML = o.map((k, i) => {
-    const L = levelDef(k), open = unlocked(k), st = totalStars(k);
+    const L = levelDef(k), open = unlocked(k), st = totalStars(k), cw = !open && codeWaiting(k);
     const icons = '<span class="lvicons">' + (L.icons ? L.icons() : "") + '</span>';
     const info = open ? '<span class="lvinfo"><span class="sti">' + ICON.star + '</span>' + st + '</span>'
+      : cw ? '<span class="lvinfo codeinfo">' + ICON.lock + ICON.key + '</span>'
       : '<span class="lvinfo">' + ICON.lock + '<span class="sti">' + ICON.star + '</span>' + totalStars(o[i - 1]) + ' / ' + need(o[i - 1]) + '</span>';
-    return '<button class="levelbtn card' + (open ? "" : " locked") + '" data-l="' + k + '"' + (open ? "" : " disabled") + '><span class="marks">' + (L.marks || "") + '</span>' + L.label + icons + info + '</button>';
+    return '<button class="levelbtn card' + (open ? "" : cw ? " codewait" : " locked") + '" data-l="' + k + '"' + (open || cw ? "" : " disabled") + '><span class="marks">' + (L.marks || "") + '</span>' + L.label + icons + info + '</button>';
   }).join('<span class="arrow">' + ICON.next.replace('#fff', '#9aa6b6') + '</span>');
-  $("levels").querySelectorAll("button:not([disabled])").forEach(b => b.onclick = () => { S.level = b.dataset.l; save(); go("map"); });
+  $("levels").querySelectorAll("button:not([disabled])").forEach(b => b.onclick = () => {
+    const k = b.dataset.l; if (b.classList.contains("codewait")) { openLock(levelDef(k).lock, k); return; }
+    S.level = k; save(); go("map");
+  });
   renderLvStatus();
 }
 
@@ -84,9 +93,11 @@ function renderMap() {
     const have = totalStars(S.level), nd = need(S.level), pc = Math.min(100, Math.round(have / Math.max(1, nd) * 100)), open = unlocked(nxt);
     g.innerHTML = '<span class="sti">' + ICON.star + '</span><div class="bar"><div style="width:' + pc + '%"></div></div><b>' + Math.min(have, nd) + ' / ' + nd + '</b>'
       + '<span class="gnext ' + (open ? "open" : "") + '">' + (open ? ICON.unlock : ICON.lock) + '<span class="marks">' + (levelDef(nxt).marks || "") + '</span></span>'
-      + (open ? '<button class="next" id="goNext">' + levelDef(nxt).label + ' ' + ICON.next + '</button>' : "");
+      + (open ? '<button class="next" id="goNext">' + levelDef(nxt).label + ' ' + ICON.next + '</button>'
+        : codeWaiting(nxt) ? '<button class="next" id="goCode">' + ICON.key + '</button>' : "");
     g.style.display = "";
     const gn = $("goNext"); if (gn) gn.onclick = () => { S.level = nxt; save(); go("map"); };
+    const gc = $("goCode"); if (gc) gc.onclick = () => openLock(levelDef(nxt).lock, nxt);
   } else g.style.display = "none";
   const rows = isTrack ? [APP.track.id] : o;
   $("slots").innerHTML = rows.map(l => levelDef(l).missions.map(mid => '<div class="slot">' + (prog(l, mid).done ? badgeSVG(mid) : "") + '</div>').join("")).join('<span class="sep"></span>');
@@ -97,7 +108,7 @@ function renderMap() {
 
 /* ---------- Mission und Aufgaben ---------- */
 let M = null;
-function startMission(mid) { const tasks = APP.buildTasks(S.level, mid); M = { mid, tasks, base: tasks.length, i: 0, stars: 0, res: [] }; go("task"); renderTask(); }
+function startMission(mid) { const tasks = APP.buildTasks(S.level, mid); M = { mid, tasks, base: tasks.length, i: 0, stars: 0, res: [], err: 0 }; go("task"); renderTask(); }
 function renderDots() {
   $("pdots").innerHTML = M.tasks.map((t, i) => { const r = M.res[i]; return '<span class="dot ' + (r === "s" ? "s" : r === "d" ? "d" : r === "r" ? "r" : "") + (t.again ? " again" : "") + '" style="' + (i === M.i ? "outline:3px solid var(--accent);outline-offset:2px" : "") + '"></span>'; }).join("");
   $("taskStars").textContent = totalStars(S.level) + M.stars;
@@ -106,6 +117,7 @@ function uniqueUrl(u) { const h = u.indexOf("#"), base = h < 0 ? u : u.slice(0, 
 
 function renderTask() {
   const t = M.tasks[M.i]; let tries = 0;
+  M.cur = null; M.sel = null;
   renderDots();
   const fb = $("fb"); fb.className = "fb"; fb.innerHTML = "";
   const show = $("show"), ans = $("answers"), pr = $("prompt");
@@ -130,33 +142,66 @@ function renderTask() {
       waitHint(h.wait.icon || ICON.eye, h.wait.text || "", h.wait.ms || 3000);
     }
   }
+  function good(node) {
+    node.classList.add("right"); M.locked = true;
+    if (!t.again) { M.stars++; M.res[M.i] = "s"; const st = stat(S.level); st.n++; if (tries === 0) st.first++; } else M.res[M.i] = "r";
+    renderDots(); burst(node);
+    showFb("good", '<span class="fbicon">' + (t.again ? ICON.ok : ICON.star) + '</span><span class="grow">Richtig!' + (t.goodText ? " " + t.goodText : "") + '</span>');
+  }
+  function bad(node, grey) {
+    tries++; M.err++; node.classList.add("shake"); setTimeout(() => node.classList.remove("shake"), 400);
+    if (grey) node.classList.add("wrong");
+    if (!t.again) { const st = stat(S.level); if (tries === 1) st.hint++; if (tries === 2) { st.sol++; st.n++; } }
+    if (tries < 2) { runHint(); return; }
+    M.locked = true; M.res[M.i] = t.again ? "r" : "d"; clearTimeout(M.wt);
+    ans.classList.remove("locked", "dim");
+    if (t.build) { M.cur = t.build.answer.slice(); drawBuild(true); }
+    else if (t.custom) { if (t.custom.solution) t.custom.solution(ctx); }
+    else ans.querySelectorAll(".ans").forEach(b => { if (b.dataset.v === answer) b.classList.add("right", "solution"); });
+    if (t.sol && t.sol.show) setShow(t.sol.show);
+    let extra = "";
+    if (!t.again) { const c = Object.assign({}, t, { again: true, answers: t.answers ? shuffle(t.answers) : t.answers }); M.tasks.push(c); extra = '<span class="againnote">' + ICON.again + 'kommt nochmal</span>'; }
+    renderDots(); showFb("sol", '<span class="grow">' + ((t.sol && t.sol.text) || "") + '</span>' + extra);
+  }
   function wire() {
     ans.querySelectorAll(".ans").forEach(btn => btn.onclick = () => {
       if (M.locked || ans.classList.contains("locked")) return;
-      if (btn.dataset.v === answer) {
-        btn.classList.add("right"); M.locked = true;
-        if (!t.again) { M.stars++; M.res[M.i] = "s"; const st = stat(S.level); st.n++; if (tries === 0) st.first++; } else M.res[M.i] = "r";
-        renderDots(); burst(btn);
-        showFb("good", '<span class="fbicon">' + (t.again ? ICON.ok : ICON.star) + '</span><span class="grow">Richtig!' + (t.goodText ? " " + t.goodText : "") + '</span>');
-      } else {
-        tries++; btn.classList.add("shake"); setTimeout(() => btn.classList.remove("shake"), 400);
-        if (ans.querySelectorAll(".ans").length > 2) btn.classList.add("wrong"); /* bei zwei Antworten bleiben beide: sonst wäre der 2. Versuch geschenkt */
-        if (!t.again) { const st = stat(S.level); if (tries === 1) st.hint++; if (tries === 2) { st.sol++; st.n++; } }
-        if (tries < 2) { runHint(); }
-        else {
-          M.locked = true; M.res[M.i] = t.again ? "r" : "d"; clearTimeout(M.wt);
-          ans.classList.remove("locked", "dim");
-          ans.querySelectorAll(".ans").forEach(b => { if (b.dataset.v === answer) b.classList.add("right", "solution"); });
-          if (t.sol && t.sol.show) setShow(t.sol.show);
-          let extra = "";
-          if (!t.again) { const c = Object.assign({}, t, { again: true, answers: shuffle(t.answers) }); M.tasks.push(c); extra = '<span class="againnote">' + ICON.again + 'kommt nochmal</span>'; }
-          renderDots(); showFb("sol", '<span class="grow">' + ((t.sol && t.sol.text) || "") + '</span>' + extra);
-        }
-      }
+      if (btn.dataset.v === answer) good(btn);
+      else bad(btn, ans.querySelectorAll(".ans").length > 2); /* bei zwei Antworten bleiben beide: sonst wäre der 2. Versuch geschenkt */
     });
   }
-  drawAnswers(t.answers);
+  /* Bau-Aufgabe: t.build = { n, answer:[…], view(arr, {sel, solution}) -> HTML mit [data-slot],
+     palette:[{v, html}] (Kästchen füllen)  ODER  cycle:["", "x", …] (Kästchen antippen schaltet weiter) } */
+  function drawBuild(solution) {
+    const B = t.build; if (!M.cur) M.cur = Array(B.n).fill(B.cycle ? B.cycle[0] : "");
+    const arr = M.cur, full = B.cycle ? true : arr.every(v => v !== "");
+    ans.className = "answers build " + (t.layout || "") + (ans.classList.contains("locked") ? " locked" : "");
+    ans.innerHTML = '<div class="bview' + (solution ? " right solution" : "") + '" id="bview">' + B.view(arr, { sel: M.sel, solution: !!solution }) + '</div>'
+      + '<div class="brow">' + (B.palette ? '<div class="bpal">' + B.palette.map(p => '<button class="ans bp" data-v="' + p.v + '">' + p.html + '</button>').join("") + '</div>' : '<div class="bpal"></div>')
+      + '<button class="bcheck' + (full ? "" : " off") + '" id="bCheck" aria-label="Fertig">' + ICON.ok + '</button></div>';
+    if (solution) return;
+    const busy = () => M.locked || ans.classList.contains("locked");
+    ans.querySelectorAll("[data-slot]").forEach(s => s.onclick = () => {
+      if (busy()) return; const i = +s.dataset.slot;
+      if (B.cycle) { const k = B.cycle.indexOf(arr[i]); arr[i] = B.cycle[(k + 1) % B.cycle.length]; }
+      else { arr[i] = ""; M.sel = i; }
+      drawBuild();
+    });
+    ans.querySelectorAll(".bp").forEach(b => b.onclick = () => {
+      if (busy()) return;
+      const i = (M.sel !== null && arr[M.sel] === "") ? M.sel : arr.indexOf(""); if (i < 0) return;
+      arr[i] = b.dataset.v; M.sel = null; drawBuild();
+    });
+    $("bCheck").onclick = () => {
+      if (busy() || !(B.cycle || arr.every(v => v !== ""))) return;
+      if (arr.join("|") === B.answer.join("|")) { drawBuild(); good($("bview")); } else bad($("bview"), false);
+    };
+  }
+  /* Eigene Aufgabenform: t.custom = { render(ctx), solution(ctx) }. render baut die Antwortfläche selbst
+     und meldet ctx.good(node) bzw. ctx.bad(node). ctx.busy() = gerade gesperrt (Hilfe läuft / erledigt). */
+  const ctx = { task: t, show, answers: ans, setShow, waitHint, tapHint, good, bad: n => bad(n, false), busy: () => M.locked || ans.classList.contains("locked") };
   M.locked = false;
+  if (t.build) drawBuild(); else if (t.custom) { ans.className = "answers custom " + (t.layout || ""); ans.innerHTML = ""; t.custom.render(ctx); } else drawAnswers(t.answers);
 }
 /* Hilfe mit Wartezeit: Antworten kurz gesperrt, damit erst geschaut wird */
 function waitHint(icon, text, ms) {
@@ -193,12 +238,17 @@ function nextTask() {
   $("doneUnlock").innerHTML = (nxt && !before && unlocked(nxt)) ? '<div class="unlockmsg">' + ICON.unlock + '<span class="marks">' + (levelDef(nxt).marks || "") + '</span>' + levelDef(nxt).label + ' ist frei!</div>' : "";
   $("doneBadge").innerHTML = badgeSVG(M.mid, true); $("doneStars").textContent = M.stars + " / " + M.base;
   go("done"); confetti(140);
+  /* optionaler Haken für Apps: perfect = alle Aufgaben im 1. Versuch */
+  if (APP.onMissionDone) APP.onMissionDone({ level: S.level, mid: M.mid, perfect: !M.err });
 }
 
 /* ---------- Freischalt-Code eingeben ---------- */
-let LOCK = null, codeIn = [];
+let LOCK = null, LOCK_LEVEL = null, LOCK_FROM = "map", codeIn = [];
 function keyHTML(L, id) { const k = L.keys.find(x => x.id === id); return k ? k.html : id; }
-function openLock(id) { LOCK = id; codeIn = []; $("codeTitle").textContent = APP.locks[id].label; renderCode(); go("code"); }
+function openLock(id, level) {
+  LOCK = id; LOCK_LEVEL = level || null; const cur = document.querySelector(".screen.on"); LOCK_FROM = cur && cur.id === "start" ? "start" : "map";
+  codeIn = []; $("codeTitle").textContent = APP.locks[id].label; renderCode(); go("code");
+}
 function renderCode() {
   const L = APP.locks[LOCK];
   $("codeSlots").innerHTML = L.code.map((x, i) => '<div class="cslot">' + (codeIn[i] ? '<div class="kv">' + keyHTML(L, codeIn[i]) + '</div>' : '<span>' + (i + 1) + '</span>') + '</div>').join("");
@@ -206,8 +256,24 @@ function renderCode() {
   $("codeKeys").querySelectorAll(".ans").forEach(b => b.onclick = () => {
     if (codeIn.length >= L.code.length) return; codeIn.push(b.dataset.k); renderCode();
     if (codeIn.length === L.code.length) setTimeout(() => {
-      if (codeIn.join() === L.code.join()) { S.locksOpen[LOCK] = true; save(); confetti(120); go("map"); }
+      if (codeIn.join() === L.code.join()) {
+        S.locksOpen[LOCK] = true; if (LOCK_LEVEL && unlocked(LOCK_LEVEL)) S.level = LOCK_LEVEL;
+        save(); sendScore(); confetti(120); go(LOCK_LEVEL && S.level !== LOCK_LEVEL ? "start" : "map");
+      }
       else { $("codeSlots").classList.add("shake"); setTimeout(() => { $("codeSlots").classList.remove("shake"); codeIn = []; renderCode(); }, 500); }
     }, 350);
   });
+}
+
+/* ---------- Extra-Bereiche (APP.extras): freie Spiel- und Übungsflächen ohne Sterne ----------
+   APP.extras = [{ id, label, icon: () => "<svg-Inhalt im 200er-Raster>", render(el), track: true|false }] */
+function renderExtras(trackOn) {
+  const box = $("extras"); if (!box) return;
+  const list = (APP.extras || []).filter(x => trackOn ? x.track : true);
+  box.innerHTML = list.map(x => '<button class="extrabtn card" data-x="' + x.id + '"><svg viewBox="0 0 200 200">' + x.icon() + '</svg><span>' + x.label + '</span></button>').join("");
+  box.querySelectorAll(".extrabtn").forEach(b => b.onclick = () => openExtra(b.dataset.x));
+}
+function openExtra(id) {
+  const x = (APP.extras || []).find(e => e.id === id); if (!x) return;
+  go("extra"); $("extraTitle").textContent = x.label; const body = $("extraBody"); body.innerHTML = ""; x.render(body);
 }

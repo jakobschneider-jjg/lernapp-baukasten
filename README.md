@@ -13,13 +13,15 @@ Aufgabe angehängt werden. Dann speichert LearningView den Lernstand jedes Kinde
 
 | Baustein | Was er tut |
 |---|---|
-| Stufen | ★ Start → ● Stufe 1 → ●● Stufe 2 … Die nächste Stufe öffnet sich mit 70 % der Sterne der vorigen. Einmal offen bleibt offen. |
+| Stufen | ★ Start → ● Stufe 1 → ●● Stufe 2 … Die nächste Stufe öffnet sich mit 70 % der Sterne der vorigen. Einmal offen bleibt offen. Optional zusätzlich mit Bild-Code (`levels[i].lock`): Die Stufe öffnet sich erst, wenn die Klasse den Code von der Tafel eingegeben hat. |
+| Aufgabenarten | Auswahl (Antwortkarten), Bau-Aufgabe (`build`: Kästchen füllen oder Zellen antippen) und eigene Aufgabe (`custom`: App baut die Antwortfläche selbst, z. B. Mitspielen im Takt). Alle nutzen dieselben Hilfen, Sterne und Wiederholungen. |
+| Extra-Bereiche | Freie Flächen ohne Sterne (`extras`), z. B. „Frei bauen“, „Trommeln“, „Das kann ich“-Karte. Knöpfe auf der Startseite. |
 | Missionen | Aufgabenreihen mit Fortschrittspunkten, Abzeichen am Ende, Krone bei allen Abzeichen. |
 | Hilfen statt Raten | Nach dem 1. Fehler sind die Antworten gesperrt, bis die Hilfe genutzt wurde (Zählhilfe: alles antippen · Wartehilfe: kurz hinschauen). Nach dem 2. Fehler zeigt die App die Lösung, die Aufgabe kommt am Ende ohne Stern noch einmal. |
 | Freischalt-Codes | Missionen bleiben gesperrt, bis die Klasse einen Bild-Code eingibt (z. B. erst nach dem Falten in der Stunde). |
 | Schiene | Stark reduzierte eigene Spur für ein Kind (z. B. Förderschwerpunkt Geistige Entwicklung), nur auf dessen Gerät eingeschaltet. |
 | Tafel | „Klasse gegen Lehrkraft“ mit Kartenstapeln für die digitale Tafel. |
-| Lehrkraft-Bereich | „Info“ → Code → Schalter (alle Stufen, Sperren, Schiene, Fortschritt löschen). |
+| Lehrkraft-Bereich | „Info“ → Code → Schalter (alle Stufen, Sperren, Schiene, Fortschritt löschen) und die Bild-Codes zum Zeigen an der Tafel. |
 | LearningView | Lernstand speichern und laden, Prozentwert auf der Kachel, Klassenübersicht, Einzelansicht, Vorschau. |
 
 ## Ordner
@@ -37,6 +39,7 @@ core/        gemeinsamer Code (nicht pro App ändern)
   shell.html   HTML-Gerüst
 apps/
   beispiel-formen/content.js   Beispiel-App „Formen-Profi“ = Vorlage
+  rhythmus/content.js, app.css Rhythmus-Baukasten (Tiernotation → Trommelraster, Mitspielen, „Das kann ich“-Karte)
 tools/build.py                 baut dist/<app>.html
 tests/                         Klicktests (Playwright), LearningView-Nachbau
 run_all.sh                     baut die Beispiel-App und führt alle Tests aus
@@ -69,7 +72,8 @@ const APP = {
   title: "Formen-Profi", subtitle: "…", credit: "mit KI erstellt · geprüft: …", crownLabel: "…",
   hero: () => "<svg…>",            // Bild oben auf der Startseite
   unlockShare: 0.7,                // Anteil Sterne für die nächste Stufe
-  levels: [ { id, marks: "★", label: "Start", icons: () => "<svg…>", missions: ["namen", …] }, … ],
+  levels: [ { id, marks: "★", label: "Start", icons: () => "<svg…>", missions: ["namen", …] },
+            { id: "s1", …, lock: "k1" }, … ],   // lock (optional): Stufe braucht zusätzlich den Code locks.k1
   track:  { id: "ge", label, switchLabel, missions: [...], startHTML: () => "…" },   // optional
   missions: { namen: { name: "Namen", icon: () => "<svg-Inhalt im 200er-Raster>" }, … },
   buildTasks(levelId, missionId) { return [Aufgabe, …]; },   // bei jedem Start neu (gemischt)
@@ -77,6 +81,8 @@ const APP = {
                      keys: [{ id: "kreis", html: "<svg…>" }, …] } },                 // optional
   board: { namen: { label: "Namen", cards: () => [{ html, reveal }] } },               // optional
   helpLink: t => "https://…/#" + …,  // optional: ?-Knopf öffnet Erklärseite in neuem Tab
+  extras: [ { id, label, icon: () => "<svg-Inhalt>", render(el), track: true|false } ],   // optional: freie Bereiche
+  onMissionDone({ level, mid, perfect }) { … },   // optional: nach jeder Mission; perfect = alles im 1. Versuch
   info: "<p>…</p>"                   // Erklärung im Lehrkraft-Bereich
 };
 ```
@@ -107,6 +113,15 @@ Hilfen (`hint`):
 
 Bei nur zwei Antworten wird eine falsche nicht ausgegraut (sonst wäre der 2. Versuch geschenkt).
 
+Weitere Aufgabenarten (statt `answers`/`answer`):
+
+* **Bau-Aufgabe** `build: { n, answer: [...], view(arr, {sel, solution}) -> HTML mit [data-slot], palette: [{v, html}] | cycle: ["", "x", …] }`
+  – `palette`: Kästchen mit Bausteinen füllen (antippen leert ein Kästchen); `cycle`: jedes Antippen schaltet weiter.
+  Prüfen über den Haken-Knopf; nach dem 2. Fehler zeigt die App die Lösung im selben Feld.
+* **Eigene Aufgabe** `custom: { render(ctx), solution(ctx) }` – `render` baut die Antwortfläche und meldet `ctx.good(node)`
+  oder `ctx.bad(node)`; `ctx.busy()` ist wahr, solange eine Hilfe läuft oder die Aufgabe erledigt ist.
+  Hilfe (`hint` als Funktion) und Wiederholung am Ende funktionieren wie bei Auswahl-Aufgaben.
+
 ## LearningView einrichten
 
 1. Aufgabe anlegen, gebaute HTML-Datei als **Anhang** hochladen, **Abgabeform „keine“**.
@@ -136,7 +151,10 @@ aus dem Elternfenster an und schreibt Namen aus LearningView nur als Text (nie a
 
 * `tests/test_lokal.py` – spielt alle Missionen wie ein Kind (Fehler, Hilfe, Lösung, Wiederholung), Freischalt-Code,
   Lehrkraft-Code, Schiene, Löschen, Tafel.
-* `tests/test_learningview.py` – nachgebautes LearningView (Herkunft `https://learningview.org`, sandbox-iframe):
+* `tests/test_rhythmus.py <html> <code> [bildordner]` – Klicktest der Rhythmus-App: alle Missionen (auch Mitspielen mit
+  getakteten Taps), Codes, Extras, Karte und Sticker, Tafel, Starter-Schiene; Bildschirmfotos in den Bildordner.
+* `tests/test_learningview.py <html>` – für jede App nutzbar (wählt selbst Auswahl-Missionen der ersten Stufe):
+  nachgebautes LearningView (Herkunft `https://learningview.org`, sandbox-iframe):
   Schüler-Modus, Neuladen, Speicherfehler, Einzelansicht, Klassenübersicht (inkl. HTML in Namen, kaputte Daten,
   abgelehnte Freigabe), Vorschau, keine Antwort, fremde Nachrichten.
 

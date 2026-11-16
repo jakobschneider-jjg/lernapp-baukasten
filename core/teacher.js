@@ -14,6 +14,9 @@ function buildTeacher() {
   Object.entries(APP.locks || {}).forEach(([id, L]) => { h += switchHTML("swLock_" + id, L.switchLabel || (L.label + " öffnen")); });
   if (APP.track) h += switchHTML("swTrack", APP.track.switchLabel || (APP.track.label + " auf diesem Gerät"));
   $("switches").innerHTML = h;
+  /* Codes zum Zeigen an der Tafel (nur nach Lehrkraft-Code sichtbar) */
+  const lc = Object.entries(APP.locks || {});
+  $("lockCodes").innerHTML = lc.length ? '<p class="lchead">' + ICON.key + 'Codes für die Tafel</p>' + lc.map(([id, L]) => '<div class="lcrow"><span class="lclabel">' + L.label + '</span><span class="lckeys">' + L.code.map(k => '<span class="lckey">' + keyHTML(L, k) + '</span>').join("") + '</span></div>').join("") : "";
   $("swAll").addEventListener("click", () => { S.unlockAll = !S.unlockAll; save(); renderSwitches(); toast(S.unlockAll ? "Alle Stufen sind offen." : "Stufen wieder gesperrt."); });
   Object.entries(APP.locks || {}).forEach(([id, L]) => $("swLock_" + id).addEventListener("click", () => {
     S.locksOpen[id] = !S.locksOpen[id]; save(); renderSwitches(); toast(S.locksOpen[id] ? L.label + ": offen." : L.label + ": wieder gesperrt.");
