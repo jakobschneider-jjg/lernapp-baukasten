@@ -52,10 +52,14 @@ Neue Erfahrungen hier ergänzen – mit Datum und Quelle (z. B. „Reflexion Geo
 9. Vor der Weitergabe: `./run_all.sh` bzw. eigene Tests + Tap-Test auf dem iPad.
 10. **Ton auf dem iPad:** Safari gibt Web-Audio erst nach einer Berührung frei – den Audio-Kontext bei jedem `pointerdown` wecken.
     Alles muss auch ohne Ton verständlich sein.
-11. **Bilder aus Worksheet Crafter nicht in Apps einbauen:** Die Nutzungsbedingungen erlauben die Weitergabe außerhalb des Programms
-    nur als PDF oder Video und schließen selbst gebaute interaktive Übungen aus (Stand Nov. 2026). Eigene Symbole zeichnen oder
-    eine Erlaubnis einholen. Lizenzierte Bilder (auch Kestner) nur über `--signs`/lokale Ordner, nie ins Repository.
-12. **Tests mit Zeitablauf** (Vorspielen, Mitspielen): auf das tatsächliche Ende der Runde warten, nicht auf eine sichtbare Meldung;
+11. **Bilder aus Worksheet Crafter nur mit Erlaubnis:** Die Nutzungsbedingungen erlauben die Weitergabe außerhalb des Programms
+    nur als PDF oder Video und schließen selbst gebaute interaktive Übungen aus (Stand Nov. 2026). Für Jakobs eigene Klassen liegt
+    eine Erlaubnis vor (Nov. 2026, Rhythmus-Trainer): Bilder nur über `--images` aus einem lokalen Ordner, Quellenzeile
+    „Material mit freundlicher Genehmigung von www.worksheetcrafter.com“. Lizenzierte Bilder (auch Kestner) nie ins Repository.
+12. **Zwei Fassungen**, wenn eine App weitergegeben werden soll: Klassen-Fassung mit lizenzierten Bildern (`--signs`, `--images`)
+    und Weitergabe-Fassung mit eigenen Zeichnungen und ohne Gebärdenbilder (`--no-signs`). Kestner-Gebärdenbilder sind nur für den
+    eigenen Unterricht. Beide Fassungen mit gleicher `APP.id` und LearningView-Schnittstelle; beide testen.
+13. **Tests mit Zeitablauf** (Vorspielen, Mitspielen): auf das tatsächliche Ende der Runde warten, nicht auf eine sichtbare Meldung;
     Overlays nach einer Mission (z. B. Sticker-Auswahl) im Test bedienen.
 
 ## Offene Fragen (bitte bei Gelegenheit testen)

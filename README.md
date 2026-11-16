@@ -39,7 +39,7 @@ core/        gemeinsamer Code (nicht pro App ändern)
   shell.html   HTML-Gerüst
 apps/
   beispiel-formen/content.js   Beispiel-App „Formen-Profi“ = Vorlage
-  rhythmus/content.js, app.css Rhythmus-Baukasten (Tiernotation → Trommelraster, Mitspielen, „Das kann ich“-Karte)
+  rhythmus/content.js, app.css Rhythmus-Trainer (Tiernotation → Trommelraster, Mitspielen, „Das kann ich“-Karte)
 tools/build.py                 baut dist/<app>.html
 tests/                         Klicktests (Playwright), LearningView-Nachbau
 run_all.sh                     baut die Beispiel-App und führt alle Tests aus
@@ -59,7 +59,24 @@ python3 tests/test_learningview.py dist/meine-app.html                  # 4. pr�
 * `--code` – Lehrkraft-Code (4–8 Ziffern). Steht **nur** in der gebauten Datei, nie im Repository.
 * `--signs` – **lokaler** Ordner mit Gebärdenbildern `WORT.jpg/.png`. Eingebettet werden nur Wörter, die im Inhalt als
   `sign('WORT')` oder als Feld `sign: "WORT"` vorkommen. Ohne Ordner erscheinen gestrichelte Platzhalter.
+* `--images` – **lokaler** Ordner mit lizenzierten App-Bildern `NAME.png` (z. B. Illustrationen mit Erlaubnis des Verlags).
+  Eingebettet werden nur Namen, die im Inhalt als `imgSrc('NAME')` vorkommen (PNG mit Transparenz, max. 320 px).
+  Fehlt ein Bild, zeigt die App ihre eigene Zeichnung.
+* `--no-signs` – Gebärdenfelder ganz weglassen (keine Platzhalter). Für eine **Fassung zum Weitergeben**, die keine
+  lizenzierten Bilder enthalten darf.
 * Ergebnis: `dist/<id>.html` (Ordner `dist/` wird nicht eingecheckt).
+
+**Zwei Fassungen einer App** (Beispiel Rhythmus-Trainer):
+
+```bash
+# eigene Klassen: lizenzierte Tierbilder + Gebärden
+python3 tools/build.py apps/rhythmus --code 1234 --signs ~/Gebaerden --images ~/Tierbilder --out Rhythmus-Trainer_Klasse.html
+# zum Weitergeben an Kolleg*innen: eigene Zeichnungen, keine Gebärdenbilder
+python3 tools/build.py apps/rhythmus --code 1234 --no-signs --out Rhythmus-Trainer.html
+```
+
+Die Quellenzeile (`credit`) kann davon abhängen, was eingebettet ist: `imgSrc('NAME')` liefert `""`, wenn ein Bild fehlt,
+`hasSigns()` sagt, ob Gebärdenbilder eingebettet sind.
 
 Voraussetzungen: Python 3, Node.js (Syntaxprüfung), für Tests `pip install playwright && playwright install chromium`.
 Optional Pillow (verkleinert Gebärdenbilder auf 360 × 270 px).
@@ -137,6 +154,8 @@ aus dem Elternfenster an und schreibt Namen aus LearningView nur als Text (nie a
 
 * Gespeichert werden nur Sterne, Abzeichen, Schalter, Zähler und ein Zeitstempel – **keine Namen, keine freien Texte,
   keine Fotos**. Namen sieht nur die Lehrkraft in der Klassenübersicht, sie kommen von LearningView.
+* **App-Bilder** über `--images` (z. B. Worksheet-Crafter-Illustrationen mit Erlaubnis) gelten wie Gebärdenbilder: nur lokal,
+  nie ins Repository, die gebaute Datei nur dort einsetzen, wo die Erlaubnis gilt.
 * **Gebärdenbilder** sind meist lizenziert (z. B. © Verlag Karin Kestner: nur für den eigenen Unterricht).
   Sie gehören **nicht** in dieses Repository und nicht in öffentlich geteilte Builds. Deshalb `--signs` mit lokalem Ordner
   und `dist/` in `.gitignore`.
