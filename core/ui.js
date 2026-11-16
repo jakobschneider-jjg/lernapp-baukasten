@@ -40,12 +40,14 @@ const ICON = {
 
 /* Bildschirmwechsel: Startseite je nach LearningView-Modus umleiten */
 function go(id) {
+  if (typeof APP !== "undefined" && APP.route) id = APP.route(id) || id; /* App kann Bildschirme umleiten (z. B. "map" auf einen eigenen Bildschirm) */
   if (id === "start" && typeof LV !== "undefined" && LV.mode === "class") id = "lvclass";
   if (id === "start" && typeof LV !== "undefined" && LV.mode === "studentReview") id = "lvreview";
   document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id));
   window.scrollTo(0, 0);
   if (id === "map") renderMap();
   if (id === "start") renderStart();
+  if (typeof APP !== "undefined" && APP.onScreen) APP.onScreen(id); /* eigene Bildschirme der App zeichnen */
 }
 
 /* kurzer Hinweis unten (keine Browser-Dialoge verwenden) */

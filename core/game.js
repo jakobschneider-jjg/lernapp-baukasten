@@ -29,12 +29,13 @@ function levelCodeOk(l) { const L = levelDef(l); return !L || !L.lock || !!S.loc
 function starsOk(l) { const o = ORDER(), i = o.indexOf(l); if (i <= 0) return true; const prev = o[i - 1]; return unlocked(prev) && totalStars(prev) >= need(prev); }
 function codeWaiting(l) { return !unlocked(l) && starsOk(l) && !levelCodeOk(l); }
 function unlocked(l) {
-  const o = ORDER(), i = o.indexOf(l); if (i <= 0 || S.unlockAll) return true;
+  const o = ORDER(), i = o.indexOf(l); if (i <= 0 || S.unlockAll || APP.parallel) return true; /* APP.parallel: Stufen sind Niveaus nebeneinander, keine Sperre */
   if (S.opened[l]) return true;
   const ok = starsOk(l) && levelCodeOk(l);
   if (ok) { S.opened[l] = true; save(); } return ok;
 }
 function scoreScaled() {
+  if (APP.score) return Math.max(0, Math.min(1, APP.score(S))); /* eigene Berechnung des Kachel-Werts */
   if (S.track && APP.track) return Math.min(1, starsOf(S, APP.track.id) / Math.max(1, levelTotalAll(APP.track.id)));
   const tot = ORDER().reduce((a, l) => a + levelTotalAll(l), 0);
   return Math.min(1, ORDER().reduce((a, l) => a + starsOf(S, l), 0) / Math.max(1, tot));
@@ -53,6 +54,7 @@ function renderStart() {
   $("appTitle").textContent = APP.title; $("appSub").textContent = APP.subtitle || "";
   $("hero").innerHTML = APP.hero ? APP.hero() : "";
   renderExtras(trackOn);
+  if (APP.renderStart) { APP.renderStart($("levels")); renderLvStatus(); return; } /* eigene Startseite (z. B. Kalender) */
   if (trackOn) {
     const T = APP.track;
     $("levels").innerHTML = '<button class="levelbtn card trackbtn" data-l="' + T.id + '">' + (T.startHTML ? T.startHTML() : '<span class="marks">' + (T.marks || "") + '</span>' + T.label) + '<span class="lvinfo"><span class="sti">' + ICON.star + '</span>' + totalStars(T.id) + '</span></button>';
