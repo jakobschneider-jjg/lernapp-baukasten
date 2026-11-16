@@ -21,7 +21,7 @@ class Check:
 async def screen(fr):
     return await fr.evaluate("document.querySelector('.screen.on').id")
 
-async def wait_unlocked(fr, ms=6000):
+async def wait_unlocked(fr, ms=12000):
     await fr.wait_for_function("!document.getElementById('answers').classList.contains('locked')", timeout=ms)
 
 async def use_hint(fr):
@@ -56,6 +56,9 @@ async def play(fr, mid, wrong_first=False, fail_first=False):
         await wait_unlocked(fr)
         await fr.click('#answers .ans[data-v="%s"]' % a)
         await fr.click("#nextBtn")
+    await fr.wait_for_timeout(300)
+    if await fr.evaluate("!!document.querySelector('#stkPick [data-stk]')"):  # App-Overlay nach der Mission (Sticker-Auswahl)
+        await fr.click("#stkPick [data-stk]"); await fr.wait_for_timeout(800)
     await fr.click("#doneNext")
 
 async def enter_pin(fr, code):

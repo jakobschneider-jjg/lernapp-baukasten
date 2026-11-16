@@ -64,10 +64,14 @@ async def main():
         print("A Schüler, erster Start")
         b, pg, fr, errs = await open_lv(p, {"mode": "student"}); await pg.wait_for_timeout(500)
         c("A Startseite nach Laden", await screen(fr) == "start")
-        await fr.click("[data-l=start]"); await play(fr, "namen", wrong_first=True); await play(fr, "ecken")
+        global M1, M2
+        ch = await fr.evaluate("APP.levels[0].missions.filter(m=>{const t=APP.buildTasks(APP.levels[0].id,m)[0];return t&&t.answers&&!t.build&&!t.custom})")
+        M1, M2 = ch[0], (ch[1] if len(ch) > 1 else ch[0])  # nur Auswahl-Missionen; gibt es nur eine, wird sie zweimal gespielt
+        n2 = await fr.evaluate("sizeOf(APP.levels[0].id, %r)" % M2)
+        await fr.click("[data-l=start]"); await play(fr, M1, wrong_first=True); await play(fr, M2)
         await pg.wait_for_timeout(5000)
         st = json.loads(await pg.evaluate("STORE"))
-        c("A Lernstand gespeichert", st["prog"]["start"]["namen"]["done"] and st["prog"]["start"]["ecken"]["stars"] == 6)
+        c("A Lernstand gespeichert", st["prog"]["start"][M1]["done"] and st["prog"]["start"][M2]["stars"] == n2)
         c("A Statistik gespeichert", st["stats"]["start"]["hint"] == 1)
         sc = await pg.evaluate("SCORES")
         c("A Ergebnis gesendet und steigend", len(sc) >= 2 and sc[-1] > 0 and sc == sorted(sc), sc)
@@ -76,17 +80,19 @@ async def main():
         c("A Ablauf setDialogSize → getAnswerData → saveAnswerData", t[:2] == ["setDialogSize", "getAnswerData"] and "saveAnswerData" in t, t)
         c("A keine Namen im Lernstand", not any(k in json.dumps(st) for k in ('"name"', '"surname"', '"studentId"')))
         c("A keine JS-Fehler", not errs, errs)
+        STARS_A = await fr.evaluate("totalStars('start')"); OPEN_A = await fr.evaluate("unlocked(APP.levels[1].id)")
+        TID, TM, TTOT, TLABEL = await fr.evaluate("[APP.track.id, APP.track.missions[0], levelTotalAll(APP.track.id), APP.track.label]")
         saved = await pg.evaluate("STORE"); await b.close()
 
         print("B Neu öffnen mit gespeichertem Stand")
         b, pg, fr, errs = await open_lv(p, {"mode": "student", "initData": saved}); await pg.wait_for_timeout(500)
-        c("B Sterne wieder da", await fr.evaluate("totalStars('start')") == 12)
-        c("B Stufe 1 offen", await fr.evaluate("unlocked('s1')"))
+        c("B Sterne wieder da", await fr.evaluate("totalStars('start')") == STARS_A > 0)
+        c("B Stufe 1 wie zuvor", await fr.evaluate("unlocked(APP.levels[1].id)") == OPEN_A)
         await b.close()
 
         print("C Speicherfehler → neuer Versuch")
         b, pg, fr, errs = await open_lv(p, {"mode": "student", "saveFailOnce": True}); await pg.wait_for_timeout(500)
-        await fr.click("[data-l=start]"); await play(fr, "ecken"); await pg.wait_for_timeout(900)
+        await fr.click("[data-l=start]"); await play(fr, M2); await pg.wait_for_timeout(900)
         c("C Fehler angezeigt", await fr.evaluate("LV.statusCode") == "SAVE_FAILED")
         await pg.wait_for_timeout(7000)
         c("C nach neuem Versuch gespeichert", await pg.evaluate("STORE!==null") and await fr.evaluate("LV.statusCode") == "ok")
@@ -101,7 +107,7 @@ async def main():
         await b.close()
 
         print("E Klassenübersicht")
-        tr = json.dumps({"track": True, "prog": {"ge": {"zwei": {"stars": 5, "total": 6, "done": True}}}, "stats": {"ge": {"n": 6, "first": 4, "hint": 2, "sol": 1}}, "t": int(time.time() * 1000)})
+        tr = json.dumps({"track": True, "prog": {TID: {TM: {"stars": 5, "total": 6, "done": True}}}, "stats": {TID: {"n": 6, "first": 4, "hint": 2, "sol": 1}}, "t": int(time.time() * 1000)})
         cls = [{"studentId": 1, "name": "Mia", "surname": "Becker", "data": saved}, {"studentId": 2, "name": "<b>Ali</b>", "surname": "Arslan", "data": ""},
                {"studentId": 3, "name": "Tom", "surname": "Zander", "data": tr}, {"studentId": 4, "name": "Lea", "surname": "Kaya", "data": "{kaputt"}]
         b, pg, fr, errs = await open_lv(p, {"mode": "class", "classData": cls}); await pg.wait_for_timeout(300)
@@ -112,7 +118,7 @@ async def main():
         c("E sortiert nach Nachname", rows[1].startswith("<b>Ali</b> Arslan"), rows[1])
         c("E Namen nicht als HTML", await fr.evaluate("!document.querySelector('#lvTable b')"))
         c("E nicht begonnen / unlesbar", "noch nicht begonnen" in rows[1] and "nicht lesbar" in " ".join(rows))
-        c("E Schiene erkannt", any("Schiene" in r and "5/10" in r for r in rows), rows)
+        c("E Schiene erkannt", any(TLABEL in r and ("5/%d" % TTOT) in r for r in rows), rows)
         await pg.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(sys.argv[1])), "shot_klasse.png"))
         await fr.click("#lvBoard"); c("E Tafel aus Klassenansicht", await screen(fr) == "board")
         await fr.click("#board [data-go=start]"); c("E zurück zur Übersicht", await screen(fr) == "lvclass")
@@ -124,7 +130,7 @@ async def main():
 
         print("F Vorschau")
         b, pg, fr, errs = await open_lv(p, {"mode": "preview"}); await pg.wait_for_timeout(400)
-        await fr.click("[data-l=start]"); await play(fr, "ecken"); await pg.wait_for_timeout(2500)
+        await fr.click("[data-l=start]"); await play(fr, M2); await pg.wait_for_timeout(2500)
         t = await types(pg)
         c("F speichert nicht, sendet kein Ergebnis", "saveAnswerData" not in t and "result" not in t, t)
         c("F Hinweis Vorschau", "Vorschau" in await fr.evaluate("$('lvstat').textContent"))
@@ -141,7 +147,7 @@ async def main():
         b, pg, fr, errs = await open_lv(p, {"mode": "student", "initData": saved}); await pg.wait_for_timeout(500)
         await fr.evaluate('''()=>{const f=document.createElement("iframe");f.srcdoc=%s;document.body.appendChild(f)}''' % json.dumps(FAKE))
         await pg.wait_for_timeout(600)
-        c("H Lernstand nicht von fremder Quelle überschrieben", await fr.evaluate("totalStars('start')") == 12)
+        c("H Lernstand nicht von fremder Quelle überschrieben", await fr.evaluate("totalStars('start')") == STARS_A)
         await b.close()
     c.done()
 

@@ -10,7 +10,7 @@
   document.querySelectorAll(".lockbig").forEach(s => s.innerHTML = ICON.lock);
   $("doneNext").innerHTML = "Weiter " + ICON.next;
   $("taskBack").onclick = () => { clearTimeout(M && M.wt); go("map"); };
-  $("codeBack").onclick = () => go("map");
+  $("codeBack").onclick = () => go(LOCK_FROM || "map");
   $("codeClear").onclick = () => { codeIn = []; renderCode(); };
   $("lvRefresh").addEventListener("click", requestClass);
   $("ki").textContent = APP.credit || "mit KI erstellt";

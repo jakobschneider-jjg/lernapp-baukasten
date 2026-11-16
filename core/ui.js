@@ -28,7 +28,8 @@ const ICON = {
   tap: '<svg viewBox="0 0 40 40" fill="none" stroke="#1b2636" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 22V9a3 3 0 0 1 6 0v10l7 2a3 3 0 0 1 2 3.5L29 34H17l-6-7a3 3 0 0 1 4-4z" fill="#fff"/><path d="M12 6l-3-3M27 6l3-3M19 2V0" stroke="#c9245a"/></svg>',
   eye: '<svg viewBox="0 0 40 40" fill="none" stroke="#1b2636" stroke-width="3"><path d="M3 20s6-11 17-11 17 11 17 11-6 11-17 11S3 20 3 20z" fill="#fff"/><circle cx="20" cy="20" r="6" fill="#2a5fc4"/></svg>',
   again: '<svg viewBox="0 0 40 40" fill="none" stroke="#9c2a1f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M32 20a12 12 0 1 1-4-9"/><path d="M30 4v8h-8"/></svg>',
-  ok: '<svg viewBox="0 0 40 40" fill="none" stroke="#157a44" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21l8 8 16-17"/></svg>'
+  ok: '<svg viewBox="0 0 40 40" fill="none" stroke="#157a44" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21l8 8 16-17"/></svg>',
+  key: '<svg viewBox="0 0 24 24" fill="none" stroke="#a87800" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4.5" fill="#fff4cc"/><path d="M12.5 12H21M18 12v3M21 12v2"/></svg>'
 };
 
 /* Bildschirmwechsel: Startseite je nach LearningView-Modus umleiten */
