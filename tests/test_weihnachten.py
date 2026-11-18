@@ -118,7 +118,9 @@ async def teil1():
         ck('zwei Antworten: keine ausgegraut', await pg.locator('#answers .ans.wrong').count() == 0)
         await pg.click('#taskBack'); ck('Zurück aus Aufgabe → Tür-Seite', await scr(pg) == 'door'); await pg.click('#tuerZurueck'); ck('Zurück → Kalender', await scr(pg) == 'start')
         # Gebärden-Video ohne Adresse: Hinweis
-        await pg.click('.ktuer[data-n="2"]'); await pg.click('#btnDgs'); ck('Video-Knopf ohne Adresse: Hinweis', 'kommt bald' in await pg.inner_text('#note')); await pg.click('#tuerZurueck')
+        await pg.evaluate("()=>{window.OFFEN=[];window.open=u=>{OFFEN.push(u);return {}}}")
+        await pg.click('.ktuer[data-n="2"]'); await pg.click('#btnDgs'); u = await pg.evaluate("OFFEN[0]||''")
+        ck('Video-Knopf öffnet das Gebärden-Video', u.startswith('https://youtu.be/') and 't=' in u, u); await pg.click('#tuerZurueck')
         # Neuladen: Stand bleibt
         await pg.reload(); await pg.wait_for_timeout(300)
         ck('nach Neuladen: 16 Türen fertig, Stufe 1', await pg.locator('.ktuer.fertig').count() == 16 and await pg.evaluate("S.level") == 's1')
