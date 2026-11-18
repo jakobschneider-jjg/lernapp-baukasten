@@ -188,3 +188,7 @@ body.esc-an #flocken{display:none}
 .sprich{display:inline-grid;place-items:center;width:52px;height:52px;margin-left:10px;flex:0 0 auto;border-radius:50%;background:#fffdf6;border:3px solid var(--tinte);box-shadow:0 3px 0 var(--tinte);vertical-align:middle}
 .sprich svg{width:30px;height:30px}
 .sprich.an,.medbtn.an{background:#ffe9a8}
+/* ---- Was fehlt an der Tür noch? ---- */
+.pulsiert{animation:pulsiert 1.4s ease-in-out infinite}
+@keyframes pulsiert{50%{box-shadow:0 4px 0 var(--tinte),0 0 0 8px rgba(255,210,87,.75)}}
+@media (prefers-reduced-motion:reduce){.pulsiert{animation:none;outline:5px solid #ffd257}}

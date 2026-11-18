@@ -116,8 +116,8 @@ async function geschafft() {
   const g = gruppeVon(nr);
   if (EMB && g[g.length - 1] === nr && g.every(n => S.fertig[n])) {   /* alle Stationen dieser Kalendertür geschafft */
     zeigeKarte(); const t = E.tuer[nr];
-    const k = await karte('<div class="kopf">' + img("stall", "kopfico") + '<h2>Tür ' + t + ' geschafft!</h2></div>' + (s === 1 ? bildreihe(["stern", "→", "stall"]) : '<div class="lesen st' + s + '"><p>' + (s === 4 ? "Im Stall ist nun wieder etwas dazugekommen." : "Im Stall kommt etwas dazu.") + '</p></div>'),
-      '<button class="kbtn" data-k="zu">Karte</button><button class="kbtn gross" data-k="kal">◀ Kalender</button>');
+    const k = await karte('<div class="kopf">' + img("stall", "kopfico") + '<h2>Abenteuer geschafft!</h2></div>' + (s === 1 ? bildreihe(["stern", "→", "stall"]) : '<div class="lesen st' + s + '"><p>' + "Super! Jetzt geht es weiter." + '</p></div>'),
+      '<button class="kbtn" data-k="zu">Karte</button><button class="kbtn gross" data-k="kal">Weiter ' + img("stern", "mini") + '</button>');
     if (k === "kal") melde({ typ: "esc-zu" });
     return;
   }

@@ -10,7 +10,7 @@ from helpers import Check
 HTML, CODE = os.path.abspath(sys.argv[1]), sys.argv[2]
 ck = Check()
 async def scr(pg): return await pg.evaluate("document.querySelector('.screen.on').id")
-VORSCHLAEGE = []
+VORSCHLAEGE = []; LICHT_FEHLT = []
 async def kind_wahl(pg):
     """Stufenwahl beim ersten Start: Stufe 2 · sanfter Vorschlag: „Ich bleibe“"""
     await pg.wait_for_function("typeof VORSCHLAG==='undefined' || !VORSCHLAG || document.querySelector('.screen.on').id!=='start' || !!document.getElementById('stufeWahl')", timeout=5000)
@@ -74,6 +74,8 @@ async def play(pg, door, mode):
         if n > 12: raise Exception('Endlosschleife Tür %d' % door)
     st = await pg.inner_text('#doneStars')
     await pg.click('#doneNext'); await pg.wait_for_timeout(80)
+    if door in (4, 9, 14, 16) and await scr(pg) == 'door':   # Licht-Abenteuer fehlt noch: Tür-Seite, Abenteuer-Knopf leuchtet
+        LICHT_FEHLT.append(await pg.locator('#btnLicht.pulsiert').count() == 1); await pg.click('#tuerZurueck')
     return st, n
 async def teil1():
     async with async_playwright() as p:
@@ -111,8 +113,8 @@ async def teil1():
                 except Exception as e:
                     ck('Stufe %d Tür %d (%s)' % (st, d, mode), False, str(e)[:200]); await pg.goto('file://' + HTML); await pg.wait_for_timeout(200)
             if st == 1:
-                ck('nach Stufe 1: 16 Türen fertig', await pg.locator('.ktuer.fertig').count() == 16)
-                ck('Kachel-Wert = 1', await pg.evaluate("scoreScaled()") == 1)
+                ck('nach Stufe 1: 12 Türen fertig, 4 warten aufs Licht-Abenteuer', await pg.locator('.ktuer.fertig').count() == 12 and len(LICHT_FEHLT) == 4 and all(LICHT_FEHLT), str(LICHT_FEHLT))
+                ck('Kachel-Wert = 12/16', await pg.evaluate("scoreScaled()") == .75)
         # zwei Antworten: nach Fehler nichts ausgegraut
         await teacher(pg, stufe=1); await pg.click('.ktuer[data-n="1"]'); await pg.click('#btnAufg'); await wrong(pg); await pg.wait_for_timeout(100)
         ck('zwei Antworten: keine ausgegraut', await pg.locator('#answers .ans.wrong').count() == 0)
@@ -123,7 +125,7 @@ async def teil1():
         ck('Video-Knopf öffnet das Gebärden-Video', u.startswith('https://youtu.be/') and 't=' in u, u); await pg.click('#tuerZurueck')
         # Neuladen: Stand bleibt
         await pg.reload(); await pg.wait_for_timeout(300)
-        ck('nach Neuladen: 16 Türen fertig, Stufe 1', await pg.locator('.ktuer.fertig').count() == 16 and await pg.evaluate("S.level") == 's1')
+        ck('nach Neuladen: 12 Türen fertig, Stufe 1', await pg.locator('.ktuer.fertig').count() == 12 and await pg.evaluate("S.level") == 's1')
         # Löschen behält die Stufe
         await teacher(pg, reset=True)
         ck('Löschen: 0 fertig, Stufe bleibt', await pg.locator('.ktuer.fertig').count() == 0 and await pg.evaluate("S.level") == 's1')

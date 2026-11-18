@@ -29,15 +29,26 @@ async def lock_set(f, ziel):
         for _ in range(12):
             if str(await f.evaluate("SCHLOSS.raeder[%d].werte[SCHLOSS.wert[%d]].v" % (i, i))) == str(v): break
             await f.click('.rad[data-i="%d"] .runter' % i)
+async def aufgaben(pg):
+    while await scr(pg) == 'task':
+        if await pg.evaluate("!!M.tasks[M.i].build"):
+            for v in await pg.evaluate("M.tasks[M.i].build.answer"): await pg.click('.bpal .ans[data-v="%s"]' % v)
+            await pg.click('#bCheck')
+        else: await pg.click('#answers .ans[data-v="%s"]' % await pg.evaluate("String(M.tasks[M.i].answer)"))
+        await pg.click('#nextBtn')
+    await pg.click('#doneNext'); await pg.wait_for_timeout(150)
 async def rahmen(pg):
     await pg.wait_for_selector('#escRahmen')
     f = await (await pg.query_selector('#escRahmen')).content_frame()
     await f.wait_for_selector('body.bereit', timeout=15000); await pg.wait_for_timeout(300); return f
-async def tuer_ende(pg, f, n):
+async def tuer_ende(pg, f, n, geuebt=False):
     await f.wait_for_selector('#karte:not([hidden]) [data-k="kal"]', timeout=8000)
-    ck('Tür %d: Abschlusskarte „Tür %d geschafft“' % (n, n), ('Tür %d geschafft' % n) in await f.inner_text('#karte'))
+    ck('Tür %d: Abschlusskarte „Abenteuer geschafft“' % n, 'Abenteuer geschafft' in await f.inner_text('#karte'))
     await shot(pg, 't%d-ende' % n)
     await f.click('#karte [data-k="kal"]'); await pg.wait_for_timeout(500)
+    if not geuebt:
+        ck('Tür %d: danach direkt Üben (Pflicht), Tür noch nicht fertig' % n, await scr(pg) == 'task' and not await pg.evaluate("fertig(%d)" % n))
+        await aufgaben(pg)
     ck('Tür %d: zurück im Kalender, Tür fertig' % n, await scr(pg) == 'start' and await pg.locator('#escRahmen').count() == 0 and await pg.locator('.ktuer.fertig[data-n="%d"]' % n).count() == 1)
 async def oeffne(pg, n):
     await pg.click('.ktuer[data-n="%d"]' % n); await pg.click('#btnLicht'); return await rahmen(pg)
@@ -54,13 +65,7 @@ async def stufenwahl(b):
     # sanfter Vorschlag nach 3 fehlerfreien Türen
     for d in (1, 2, 3):
         await pg.click('.ktuer[data-n="%d"]' % d); await pg.click('#btnAufg')
-        while await scr(pg) == 'task':
-            if await pg.evaluate("!!M.tasks[M.i].build"):
-                for v in await pg.evaluate("M.tasks[M.i].build.answer"): await pg.click('.bpal .ans[data-v="%s"]' % v)
-                await pg.click('#bCheck')
-            else: await pg.click('#answers .ans[data-v="%s"]' % await pg.evaluate("String(M.tasks[M.i].answer)"))
-            await pg.click('#nextBtn')
-        await pg.click('#doneNext'); await pg.wait_for_timeout(100)
+        await aufgaben(pg)
         if await pg.locator('#stufeWahl').count() == 0: await pg.wait_for_timeout(1900)
     ck('nach 3 fehlerfreien Türen: Vorschlag Stufe 2', await pg.locator('#stufeWahl [data-v="ja"]').count() == 1 and 'Stufe 2' in await pg.inner_text('#stufeWahl'))
     await shot(pg, 'vorschlag')
@@ -116,14 +121,16 @@ async def licht(b):
     await tap(f, '#zurueck'); await pg.wait_for_timeout(300); await tap(f, '.s-schloss'); await lock_set(f, [1, 1, 1, 5]); await f.click('#sOk')
     await f.wait_for_selector('#karte:not([hidden]) [data-k="weiter"]', timeout=5000); await f.click('#karte [data-k="weiter"]')
     await tuer_ende(pg, f, 4)
-    # Tür 9: Station 3
-    f = await oeffne(pg, 9)
+    # Tür 9: erst Üben, dann Abenteuer
+    await pg.click('.ktuer[data-n="9"]'); await pg.click('#btnAufg'); await aufgaben(pg)
+    ck('Tür 9: nach Üben zurück auf der Tür-Seite, Abenteuer-Knopf leuchtet', await scr(pg) == 'door' and await pg.locator('#btnLicht.pulsiert').count() == 1 and not await pg.evaluate("fertig(9)"))
+    await pg.click('#btnLicht'); f = await rahmen(pg)
     ck('Tür 9: Station 3 ist die neue', await f.locator('.wegpunkt.neu').count() == 1 and await f.locator('.wegpunkt.fertig').count() == 2)
     await tap(f, '.wegpunkt >> nth=2'); await los(f); await pg.wait_for_timeout(300)
     await tap(f, '.tierspot.t-pferd'); await zu(f)
     await tap(f, '#aktion'); await lock_set(f, ['pferd', 'kuh', 'schaf']); await f.click('#sOk')
     await f.wait_for_selector('#karte:not([hidden]) [data-k="weiter"]', timeout=5000); await f.click('#karte [data-k="weiter"]')
-    await tuer_ende(pg, f, 9)
+    await tuer_ende(pg, f, 9, geuebt=True)
     # Tür 14: Station 4 + 5
     f = await oeffne(pg, 14)
     await tap(f, '.wegpunkt >> nth=3'); await los(f); await pg.wait_for_timeout(300)
