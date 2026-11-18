@@ -4,11 +4,12 @@ Aufruf (im Repository-Ordner): python3 frei/licht-fuer-den-stall/bauen.py --code
 Der Lehrkraft-Code steht nur in der gebauten Datei, nie im Repository."""
 import argparse, os, re, subprocess, sys, tempfile
 H = os.path.dirname(os.path.abspath(__file__)); F = os.path.dirname(H)
-ap = argparse.ArgumentParser(); ap.add_argument("--code", required=True); ap.add_argument("--out", default=os.path.join(os.path.dirname(F), "dist", "Ein-Licht-fuer-den-Stall.html")); a = ap.parse_args()
-if not re.fullmatch(r"\d{4,8}", a.code): sys.exit("--code: 4–8 Ziffern")
+ap = argparse.ArgumentParser(); ap.add_argument("--code", default=""); ap.add_argument("--eingebettet", action="store_true", help="Fassung für den Adventskalender (srcdoc, ohne Lehrkraft-Bereich und LearningView)"); ap.add_argument("--out", default=os.path.join(os.path.dirname(F), "dist", "Ein-Licht-fuer-den-Stall.html")); a = ap.parse_args()
+if not a.eingebettet and not re.fullmatch(r"\d{4,8}", a.code): sys.exit("--code: 4–8 Ziffern")
 lies = lambda p: open(p, encoding="utf-8").read()
 js = '"use strict";\n' + lies(os.path.join(F, "kreide.js")) + "".join(lies(os.path.join(H, "src", f)) for f in ["buehne.js", "szenen.js", "texte.js", "stationen.js", "spiel.js"])
-js = js.replace("__TEACH_CODE__", a.code)
+js = js.replace("__TEACH_CODE__", a.code or "0000")
+if a.eingebettet: js = js.replace('"use strict";\n', '"use strict";\nwindow.ESC_EMB = 1;\n', 1)
 with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as t: t.write(js)
 r = subprocess.run(["node", "--check", t.name], capture_output=True, text=True); os.unlink(t.name)
 if r.returncode: sys.exit(r.stderr)

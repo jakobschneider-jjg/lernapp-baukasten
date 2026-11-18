@@ -111,6 +111,7 @@ Haken für Apps mit eigenem Aufbau (alle optional, Beispiel: `apps/weihnachten-i
 * `route(id)` / `onScreen(id)` – Bildschirmwechsel umleiten (z. B. `"map"` auf einen eigenen Bildschirm) und eigene Bildschirme zeichnen.
 * `score(S)` – eigener Kachel-Wert (0–1); `reached(S)` – eigener Text in der Spalte „Stand“ der Klassenübersicht.
 * `teacher: { html(), wire(root), render(root) }` – eigene Schalter im Lehrkraft-Bereich; `unlockAllLabel`, `keepOnReset: ["level"]`.
+* `classExtra(box, rows)` – eigener Bereich über der Tabelle der Klassenübersicht (z. B. Klassenhimmel). `rows` kommt von LearningView: Namen nur per `textContent` einsetzen, nichts davon speichern.
 
 ### Aufgabe
 

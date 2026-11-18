@@ -44,6 +44,7 @@ function renderClass(rows) {
   const tb = el("table", "lvtab"); tb.appendChild(tableHead());
   rows.slice().sort((a, b) => String(a.surname || "").localeCompare(String(b.surname || ""), "de") || String(a.name || "").localeCompare(String(b.name || ""), "de"))
     .forEach(r => tb.appendChild(summaryRow(((r.name || "") + " " + (r.surname || "")).trim() || "(ohne Namen)", r.data)));
+  if (APP.classExtra) { const x = el("div", "lvextra"); box.appendChild(x); APP.classExtra(x, rows); } /* eigener Bereich der App über der Tabelle (z. B. Klassenhimmel); Namen nur per textContent */
   box.appendChild(tb);
   if (!rows.length) box.appendChild(el("p", "lvmsg", "In diesem Kurs sind keine Lernenden eingetragen."));
 }

@@ -3,6 +3,11 @@
 const APP_ID = "licht-fuer-den-stall";
 const TEACH_CODE = "__TEACH_CODE__";
 const STATIONEN = [1, 2, 3, 4, 5, 6, 7];
+/* Eingebettet in den Adventskalender „Weihnachten im Stall“ (srcdoc-Rahmen): der Kalender speichert, diese Datei meldet nur */
+const EMB = !!window.ESC_EMB;
+const E = { gruppen: [[1, 2, 3, 4, 5, 6, 7]], erlaubt: [1, 2, 3, 4, 5, 6, 7], tuer: {} };
+function melde(m) { if (EMB) try { window.parent.postMessage(m, "*"); } catch (e) { } }
+function gruppeVon(nr) { return E.gruppen.find(g => g.includes(nr)) || [nr]; }
 let S = { v: 1, stufe: 2, fertig: {}, alleOffen: false, fehl: {}, tipps: {}, t: 0 };
 function zustandSetzen(o) { S = Object.assign({ v: 1, stufe: 2, fertig: {}, alleOffen: false, fehl: {}, tipps: {}, t: 0 }, o && typeof o === "object" ? o : {}); ["fertig", "fehl", "tipps"].forEach(k => { if (!S[k] || typeof S[k] !== "object") S[k] = {}; }); }
 const LVO = "https://learningview.org";
@@ -12,6 +17,7 @@ try { LV.rahmen = window.parent !== window; } catch (e) { LV.rahmen = true; }
 function lvSend(m) { if (LV.rahmen) try { window.parent.postMessage(m, LVO); } catch (e) { } }
 function speichern() {
   S.t = Date.now();
+  if (EMB) return;
   if (LV.modus === "lokal") { try { localStorage.setItem(APP_ID, JSON.stringify(S)); } catch (e) { } return; }
   if (LV.modus !== "student" || !LV.geladen) return;
   LV.wartend = JSON.stringify(S); lvPumpe();
@@ -95,18 +101,26 @@ async function starteStation(nr) {
 function hilfe() {
   if (!ST || ST.nr === 7) return;
   ST.tipp = Math.min(ST.tipp + 1, 3); ST.gesperrt = false; schlossStatus();
-  S.tipps[ST.nr] = (S.tipps[ST.nr] || 0) + 1; speichern();
+  S.tipps[ST.nr] = (S.tipps[ST.nr] || 0) + 1; speichern(); melde({ typ: "esc-stat", nr: ST.nr, k: "tipp" });
   const s = S.stufe, i = ST.tipp - 1;
   const inhalt = s === 1 ? bildreihe(BILD_TIPPS[ST.nr][i]) : '<div class="lesen st' + s + '"><p>' + TX[ST.nr].tipps[s][i] + '</p></div>';
   karte('<div class="kopf">' + img("laterne", "kopfico") + '<h2>Tipp ' + ST.tipp + '</h2></div>' + inhalt).then(() => STATION[ST.nr].tipp && STATION[ST.nr].tipp(i));
 }
-function fehler() { ST.fehl++; S.fehl[ST.nr] = (S.fehl[ST.nr] || 0) + 1; speichern(); }
+function fehler() { ST.fehl++; S.fehl[ST.nr] = (S.fehl[ST.nr] || 0) + 1; speichern(); melde({ typ: "esc-stat", nr: ST.nr, k: "fehl" }); }
 async function geschafft() {
-  const nr = ST.nr; S.fertig[nr] = true; speichern(); leiste();
+  const nr = ST.nr; S.fertig[nr] = true; speichern(); leiste(); melde({ typ: "esc-fertig", nr });
   await new Promise(r => setTimeout(r, 1500));
   const s = S.stufe;
   await karte('<div class="kopf">' + img("stern", "kopfico") + '<h2>Geschafft!</h2></div>' + (s === 1 ? bildreihe([TX[nr].icon, "→", "stern"]) : lesen(nr, "fertig")),
     '<button class="kbtn gross" data-k="weiter">Weiter ' + img("stern", "mini") + '</button>');
+  const g = gruppeVon(nr);
+  if (EMB && g[g.length - 1] === nr && g.every(n => S.fertig[n])) {   /* alle Stationen dieser Kalendertür geschafft */
+    zeigeKarte(); const t = E.tuer[nr];
+    const k = await karte('<div class="kopf">' + img("stall", "kopfico") + '<h2>Tür ' + t + ' geschafft!</h2></div>' + (s === 1 ? bildreihe(["stern", "→", "stall"]) : '<div class="lesen st' + s + '"><p>' + (s === 4 ? "Im Stall ist nun wieder etwas dazugekommen." : "Im Stall kommt etwas dazu.") + '</p></div>'),
+      '<button class="kbtn" data-k="zu">Karte</button><button class="kbtn gross" data-k="kal">◀ Kalender</button>');
+    if (k === "kal") melde({ typ: "esc-zu" });
+    return;
+  }
   zeigeKarte(nr);
 }
 
@@ -149,7 +163,11 @@ function freiAlle() { $("welt").textContent = ""; B.ebenen = []; B.dunkel = 0; B
 function szene(name) { baueSzene(name); }
 
 /* ---------- Wegkarte (Start) ---------- */
-function offen(nr) { return S.alleOffen || nr === 1 || !!S.fertig[nr - 1] || !!S.fertig[nr]; }
+function offen(nr) {
+  if (S.alleOffen) return true;
+  if (EMB) { if (!E.erlaubt.includes(nr)) return false; const g = gruppeVon(nr); return g[0] === nr || !!S.fertig[nr - 1] || !!S.fertig[nr]; }
+  return nr === 1 || !!S.fertig[nr - 1] || !!S.fertig[nr];
+}
 function zeigeKarte(neu) {
   ST = null; freiAlle(); szene("karte");
   $("titel").textContent = "Ein Licht für den Stall"; $("hilfe").hidden = true; $("zurKarte").hidden = true; $("aktion").hidden = true; leiste();
@@ -157,7 +175,7 @@ function zeigeKarte(neu) {
     const nr = i + 1, f = !!S.fertig[nr], o = offen(nr);
     const b = spot("weg", p[0], p[1] - 40, 150, 150, "wegpunkt" + (f ? " fertig" : o ? " offen" : " zu") + (neu === nr ? " neu" : ""), () => {
       neigenErlauben();
-      if (!offen(nr)) { hinweis(S.stufe === 1 ? "🔒" : "Diese Station ist noch zu. Löst zuerst Station " + (nr - 1) + "."); wackeln(b); return; }
+      if (!offen(nr)) { hinweis(S.stufe === 1 ? "🔒" : EMB && !E.erlaubt.includes(nr) ? "Diese Station kommt mit Tür " + E.tuer[nr] + "." : "Diese Station ist noch zu. Löst zuerst Station " + (nr - 1) + "."); wackeln(b); return; }
       starteStation(nr);
     });
     b.innerHTML = img(TX[nr].icon, "wpbild") + '<b>' + (nr === 7 ? "★" : nr) + '</b>' + (f ? img("stern", "wpstern") : !o ? img("schloss", "wpschloss") : "");
@@ -197,10 +215,21 @@ function lkZeigen() {
 
 /* ---------- Start ---------- */
 function start() {
-  baueRahmen(); eingabe(); requestAnimationFrame(parallaxe); lkAufbau();
+  baueRahmen(); eingabe(); requestAnimationFrame(parallaxe);
+  if (!EMB) lkAufbau();
   $("hilfe").innerHTML = img("laterne"); $("hilfe").onclick = hilfe;
   $("zurueck").onclick = () => { $("zurueck").hidden = true; $("zurKarte").hidden = false; aussen(); };
   $("zurKarte").innerHTML = "◀ Karte"; $("zurKarte").onclick = () => { $("schlossBox").hidden = true; $("zurueck").hidden = true; zeigeKarte(); };
+  if (EMB) {
+    $("infoBtn").textContent = "◀ Kalender"; $("infoBtn").classList.add("kalbtn"); $("infoBtn").onclick = () => melde({ typ: "esc-zu" });
+    window.addEventListener("message", e => {
+      if (e.source !== window.parent || !e.data || e.data.typ !== "esc-start") return;
+      const d = e.data; zustandSetzen({ stufe: d.stufe, fertig: d.fertig, alleOffen: !!d.alleOffen });
+      E.gruppen = d.gruppen; E.erlaubt = d.erlaubt; E.tuer = d.tuer;
+      $("laden").hidden = true; document.body.classList.add("bereit"); zeigeKarte(d.fokus);
+    });
+    melde({ typ: "esc-bereit" }); return;
+  }
   lvStart(() => { $("laden").hidden = true; document.body.classList.add("bereit"); zeigeKarte(); });
 }
 window.addEventListener("load", () => { if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start(); });

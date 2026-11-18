@@ -10,7 +10,14 @@ from helpers import Check
 HTML, CODE = os.path.abspath(sys.argv[1]), sys.argv[2]
 ck = Check()
 async def scr(pg): return await pg.evaluate("document.querySelector('.screen.on').id")
+VORSCHLAEGE = []
+async def kind_wahl(pg):
+    """Stufenwahl beim ersten Start: Stufe 2 · sanfter Vorschlag: „Ich bleibe“"""
+    await pg.wait_for_function("typeof VORSCHLAG==='undefined' || !VORSCHLAG || document.querySelector('.screen.on').id!=='start' || !!document.getElementById('stufeWahl')", timeout=5000)
+    if await pg.locator('#stufeWahl [data-v="nein"]').count(): VORSCHLAEGE.append(1); await pg.click('#stufeWahl [data-v="nein"]')
+    if await pg.locator('#stufeWahl .wahl[data-l="s2"]').count(): await pg.click('#stufeWahl .wahl[data-l="s2"]')
 async def teacher(pg, stufe=None, alle=None, reset=False):
+    await kind_wahl(pg)
     await pg.click('#infoBtn')
     for k in CODE: await pg.click('#pinPad button[data-k="%s"]' % k)
     await pg.wait_for_selector('#teachOpen:not([hidden])')
@@ -48,6 +55,7 @@ async def hint(pg):
     await unlocked(pg)
 async def play(pg, door, mode):
     """mode: ok | hilfe (1. Aufgabe: falsch, Hilfe, richtig) | loesung (1. Aufgabe zweimal falsch)"""
+    await kind_wahl(pg)
     await pg.click('.ktuer[data-n="%d"]' % door)
     assert await scr(pg) == 'door', 'Tür-Seite fehlt'
     await pg.click('#btnAufg')
@@ -73,6 +81,8 @@ async def teil1():
         errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
         await pg.goto('file://' + HTML); await pg.wait_for_timeout(300)
         ck('Start: Kalender mit 16 Türen', await pg.locator('.ktuer').count() == 16)
+        ck('Erststart: Kind wählt seine Stufe', await pg.locator('#stufeWahl .wahl').count() == 4)
+        await pg.click('#stufeWahl .wahl[data-l="s2"]')
         zu = await pg.locator('.ktuer.zu').count(); heute_vor = await pg.evaluate("Date.now() < new Date(2026,11,1).getTime()")
         if heute_vor:
             ck('vor dem 1.12.: alle Türen zu', zu == 16)
@@ -88,7 +98,7 @@ async def teil1():
         await pg.wait_for_timeout(900); ck('falscher Code öffnet nicht', await pg.is_hidden('#teachOpen')); await pg.click('#closeInfo')
         await teacher(pg, alle=True)
         ck('Schalter: alle Türen offen', await pg.locator('.ktuer.offen').count() == 16)
-        ck('ohne Einstellung gilt Stufe 2', await pg.evaluate("lvl()") == 's2')
+        ck('gewählte Stufe 2 gilt', await pg.evaluate("lvl()") == 's2')
         for st in (1, 2, 3, 4):
             await teacher(pg, stufe=st)
             for d in range(1, 17):
@@ -118,6 +128,7 @@ async def teil1():
         # Tafel
         await pg.click('#toBoard'); ck('Tafel öffnet', await scr(pg) == 'board'); await pg.click('#bReveal'); ck('Tafel: Lösung sichtbar', await pg.locator('#reveal.on').count() == 1)
         for dk in ('w2', 'w3', 'w4', 'hilft'): await pg.click('.deck[data-d="%s"]' % dk); await pg.click('#bNext')
+        ck('sanfter Vorschlag kam (und wurde abgelehnt)', len(VORSCHLAEGE) >= 1, str(len(VORSCHLAEGE)))
         ck('keine Skriptfehler', not errs, str(errs[:3]))
         await b.close()
 PARENT = '''<!doctype html><html><body style="margin:0"><script>
@@ -204,7 +215,7 @@ async def teil2():
         print("D Lehrkraft sieht Lernstand (nur lesen)")
         b, pg, fr, errs = await open_lv(p, {"mode": "studentReview", "initData": saved}); await pg.wait_for_timeout(900)
         c("D Einzelansicht", await scr(fr) == "lvreview")
-        c("D Stand-Text", "Stufe 2 · 2/16 Türen" in await fr.evaluate("$('rvReached').textContent"))
+        c("D Stand-Text", "Stufe 2 (selbst gewählt) · 2/16 Türen" in await fr.evaluate("$('rvReached').textContent"))
         c("D speichert nichts", "saveAnswerData" not in await types(pg) and "result" not in await types(pg))
         c("D keine JS-Fehler", not errs, errs)
         await b.close()
@@ -212,17 +223,39 @@ async def teil2():
         print("E Klassenübersicht")
         s4 = json.dumps({"level": "s4", "prog": {"s4": {"t5": {"stars": 2, "total": 2, "done": True}}}, "stats": {"s4": {"n": 2, "first": 1, "hint": 1, "sol": 0}}, "t": int(time.time() * 1000)})
         cls = [{"studentId": 1, "name": "Mia", "surname": "Becker", "data": saved}, {"studentId": 2, "name": "<b>Ali</b>", "surname": "Arslan", "data": ""},
-               {"studentId": 3, "name": "Tom", "surname": "Zander", "data": s4}, {"studentId": 4, "name": "Lea", "surname": "Kaya", "data": "{kaputt"}]
+               {"studentId": 3, "name": "Tom", "surname": "Zander", "data": s4}, {"studentId": 4, "name": "Lea", "surname": "Kaya", "data": "{kaputt"},
+               {"studentId": 5, "name": "<img src=x onerror=alert(1)>", "surname": "Quast", "data": s4}, {"studentId": 6, "name": "Tom", "surname": "Albers", "data": s4}]
         b, pg, fr, errs = await open_lv(p, {"mode": "class", "classData": cls}); await pg.wait_for_timeout(300)
         c("E Hinweis während Freigabe", "Freigabe" in await fr.evaluate("$('lvMsg').textContent"))
         await pg.wait_for_timeout(1800)
         rows = await fr.evaluate("[...document.querySelectorAll('#lvTable tr')].map(r=>r.innerText.replace(/\\s+/g,' ').trim())")
-        c("E 4 Zeilen + Kopf", len(rows) == 5, rows)
-        c("E Namen nicht als HTML", await fr.evaluate("!document.querySelector('#lvTable b')"))
-        c("E Stand je Kind (Stufe · Türen)", any("Stufe 2 · 2/16 Türen" in r for r in rows) and any("Stufe 4 · 1/16 Türen" in r for r in rows), rows)
+        c("E 6 Zeilen + Kopf", len(rows) == 7, rows)
+        c("E Namen nicht als HTML", await fr.evaluate("!document.querySelector('#lvTable b') && !document.querySelector('#lvTable td img')"))
+        c("E Stand je Kind (Stufe · Türen)", any("Stufe 2 (selbst gewählt) · 2/16 Türen" in r for r in rows) and any("Stufe 4 (selbst gewählt) · 1/16 Türen" in r for r in rows), rows)
         c("E nicht begonnen / unlesbar", "noch nicht begonnen" in " ".join(rows) and "nicht lesbar" in " ".join(rows))
         await pg.screenshot(path=os.path.join(os.path.dirname(HTML), "shot_klasse.png"))
+        c("E Klassenhimmel-Knopf über der Tabelle", await fr.locator('#lvTable #btnHimmel').count() == 1)
+        await fr.click('#btnHimmel'); await pg.wait_for_timeout(5000)
+        namen = await fr.evaluate("[...document.querySelectorAll('#himmel .ksname')].map(x=>x.textContent)")
+        c("E Himmel: ein Stern je Kind, das mitgemacht hat (4)", len(namen) == 4, namen)
+        c("E Himmel: nur Vornamen, gleiche Vornamen mit Initiale", "Mia" in namen and "Tom A." in namen and "Tom Z." in namen and not any("Becker" in n for n in namen), namen)
+        c("E Himmel: Namen nur als Text", "<img src=x onerror=alert(1)>" in namen and await fr.evaluate("document.querySelectorAll('#himmel .ksname img').length") == 0)
+        c("E Himmel: alle Sterne gleich groß", len(set(await fr.evaluate("[...document.querySelectorAll('#himmel .ksbild')].map(x=>x.offsetWidth)"))) == 1)
+        await pg.screenshot(path=os.path.join(os.path.dirname(HTML), "shot_himmel.png"))
+        await fr.click('#hZu'); c("E Himmel schließt", await fr.locator('#himmel').count() == 0)
+        c("E Klassenansicht speichert nichts", "saveAnswerData" not in await types(pg))
         c("E keine JS-Fehler", not errs, errs)
+        await b.close()
+
+        print("I Licht-Abenteuer im LearningView-Rahmen (Sandbox)")
+        b, pg, fr, errs = await open_lv(p, {"mode": "student", "initData": saved}); await pg.wait_for_timeout(500)
+        await fr.click('.ktuer[data-n="4"]'); await fr.click('#btnLicht'); await pg.wait_for_timeout(2500)
+        ef = [f for f in pg.frames if f.parent_frame == fr]
+        c("I Rahmen lädt, Karte mit Station 1 offen", len(ef) == 1 and await ef[0].locator('.wegpunkt.offen').count() == 1)
+        if ef: await ef[0].dispatch_event('#infoBtn', 'click'); await pg.wait_for_timeout(400)
+        c("I „◀ Kalender“ schließt", await fr.locator('#escRahmen').count() == 0 and await scr(fr) == "door")
+        errs = [e for e in errs if "Permissions policy violation" not in e]   # Chrome-Hinweis: Neigungssensor im Test-Rahmen nicht freigegeben (Wischen geht)
+        c("I keine JS-Fehler", not errs, errs)
         await b.close()
 
         print("F Vorschau")

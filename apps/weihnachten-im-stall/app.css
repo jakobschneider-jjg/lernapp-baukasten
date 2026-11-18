@@ -122,3 +122,63 @@ body[data-scr="start"] #flocken,body[data-scr="door"] #flocken{display:block}
 .reveal .rv img.pic{width:130px;height:130px}
 #lvclass,#lvreview{background:var(--papier);border-radius:16px}
 #lvclass h2,#lvreview h2{color:var(--tinte)}
+/* ---- Stufe selbst wählen ---- */
+.stufechip{position:absolute;right:22px;top:20px;background:var(--papier);border:3px solid var(--tinte);border-radius:999px;padding:4px 14px;display:flex;align-items:center;gap:8px;font-size:18px;box-shadow:0 3px 0 var(--tinte);min-height:48px}
+.stufechip b{font-size:20px}.stufechip .wmarks{color:#d89a00;letter-spacing:-2px}
+.stufechip .wechsel{font-size:14px;color:#56657a;border-left:2px solid #d2c7a8;padding-left:8px}
+.stufechip .fest svg{width:20px;height:20px}
+.wahlbox{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:rgba(6,9,24,.72);padding:12px;overflow:auto}
+.wahlkarte{width:min(980px,96vw);padding:18px 22px}
+.wahlkarte.klein{width:min(620px,94vw);text-align:center}
+.wahlkopf{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.wahlkarte h2{margin:0;font-size:clamp(26px,3.2vw,36px);font-weight:700}
+.wahlfrage{display:flex;align-items:center;gap:10px;font-size:clamp(20px,2.4vw,26px);margin:8px 0 14px}
+.wahlkarte.klein .wahlfrage{justify-content:center}
+.wahlfrage .pico svg{width:40px;height:40px}
+.wahlliste{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.wahl{display:flex;flex-direction:column;align-items:stretch;gap:8px;text-align:left;background:#fffdf6;border:3px solid var(--tinte);border-radius:18px 14px 20px 13px;box-shadow:0 4px 0 var(--tinte);padding:12px 14px;min-height:150px}
+.wahl:active{transform:translateY(3px);box-shadow:0 1px 0 var(--tinte)}
+.wahl.on{background:#ffe9a8}
+.wahl.nur{margin:0 auto 14px;max-width:480px}
+.wkopf{display:flex;justify-content:space-between;align-items:center;font-size:20px}
+.wkopf .wmarks{color:#d89a00;font-size:24px;letter-spacing:-2px}
+.wahl .wchips{justify-content:flex-start;gap:10px}
+.wahl .chip1{min-width:0;padding:4px 10px}.wahl .chip1 .cpic{width:84px;height:84px}.wahl .chip1 b{font-size:22px}
+.probe{font-size:clamp(22px,2.6vw,30px);line-height:1.4}
+.probe.st4{font-size:clamp(20px,2.3vw,26px)}
+.wahlnote{margin:12px 0 0;color:#56657a;font-size:16px}
+.wahlknoepfe{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.next.leise{background:var(--papier)}
+@media (max-width:640px){.wahlliste{grid-template-columns:1fr}}
+/* ---- Licht-Abenteuer auf der Tür-Seite ---- */
+.lichtteil{display:flex;flex-direction:column;gap:10px;align-items:flex-start;margin-bottom:14px;padding-bottom:14px;border-bottom:3px dashed #d2c7a8}
+.lichtstat{display:flex;gap:10px;flex-wrap:wrap}
+.lst{display:flex;align-items:center;gap:6px;border:2px solid #b9a982;border-radius:999px;padding:2px 12px 2px 4px;background:#fffdf6;font-size:17px;color:#56657a}
+.lst.an{border-color:var(--tinte);color:var(--tinte);background:#ffe9a8}
+.lst .lsico{width:40px;height:40px}
+.lst b{font-weight:400}
+.next.licht{display:flex;align-items:center;gap:10px;font-size:24px;padding:8px 22px 8px 10px;min-height:70px;background:linear-gradient(#ffe08a,#ffc94a)}
+.next.licht img.mbico{width:60px;height:60px}
+#escRahmen{position:fixed;inset:0;width:100%;height:100%;border:0;z-index:60;background:#0b1024}
+body.esc-an #flocken{display:none}
+/* ---- Klassenhimmel (Klassenansicht) ---- */
+.lvextra{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 0 14px}
+.next.himmelbtn{display:flex;align-items:center;gap:10px;font-size:20px;padding:6px 18px 6px 8px}
+.next.himmelbtn img.mbico{width:46px;height:46px}
+.himmelinfo{color:#56657a;font-size:16px}
+#himmel{position:fixed;inset:0;z-index:70;background:#070b1c;display:grid;place-items:center}
+.hbuehne{position:relative;width:min(100vw,calc(100vh * 1600 / 1040));aspect-ratio:1600/1040;overflow:hidden}
+.hbild{position:absolute;inset:0;width:100%;height:100%;display:block}
+.htitel{position:absolute;left:0;right:0;top:2.5%;margin:0;text-align:center;color:#fbf3d9;font-size:clamp(22px,3.4vw,52px);font-weight:700;text-shadow:0 2px 0 #0b1024,0 0 18px rgba(11,16,36,.9)}
+.hsterne{position:absolute;inset:0}
+.kstern{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;opacity:0;animation:kserscheint 1.2s ease-out forwards}
+.ksbild{width:clamp(46px,7vw,110px);height:auto;filter:drop-shadow(0 0 14px rgba(255,226,120,.85));animation:funkeln 3.2s ease-in-out infinite}
+.ksname{margin-top:-4px;color:#fff;font-size:clamp(15px,2.2vw,34px);font-weight:700;white-space:nowrap;text-shadow:0 2px 0 #0b1024,0 0 10px #0b1024,0 0 4px #0b1024}
+@keyframes kserscheint{0%{opacity:0;transform:translate(-50%,-30%) scale(.4)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+@keyframes funkeln{0%,100%{transform:scale(1)}50%{transform:scale(1.08);filter:drop-shadow(0 0 22px rgba(255,236,160,1))}}
+.hleer{position:absolute;left:0;right:0;top:40%;text-align:center;color:#fbf3d9;font-size:28px}
+.hknoepfe{position:fixed;right:14px;bottom:12px;display:flex;gap:10px;z-index:71}
+.hbtn{background:rgba(251,243,217,.9);border:3px solid var(--tinte);border-radius:14px;padding:8px 16px;font-size:18px}
+.hbtn[hidden]{display:none}
+#himmel:fullscreen .hknoepfe{opacity:.25}#himmel:fullscreen .hknoepfe:hover{opacity:1}
+@media (prefers-reduced-motion:reduce){.kstern{animation:none;opacity:1}.ksbild{animation:none}}
