@@ -182,3 +182,9 @@ body.esc-an #flocken{display:none}
 .hbtn[hidden]{display:none}
 #himmel:fullscreen .hknoepfe{opacity:.25}#himmel:fullscreen .hknoepfe:hover{opacity:1}
 @media (prefers-reduced-motion:reduce){.kstern{animation:none;opacity:1}.ksbild{animation:none}}
+/* ---- Vorlesen (iPad-Stimme) ---- */
+.lesetext > span.tippbar,.tuertext .chip1.tippbar{cursor:pointer;border-radius:8px;transition:background .2s}
+.lesetext > span.liest,.tuertext .chip1.liest{background:#ffe08a;box-shadow:0 0 0 4px #ffe08a}
+.sprich{display:inline-grid;place-items:center;width:52px;height:52px;margin-left:10px;flex:0 0 auto;border-radius:50%;background:#fffdf6;border:3px solid var(--tinte);box-shadow:0 3px 0 var(--tinte);vertical-align:middle}
+.sprich svg{width:30px;height:30px}
+.sprich.an,.medbtn.an{background:#ffe9a8}

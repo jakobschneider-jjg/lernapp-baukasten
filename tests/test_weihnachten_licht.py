@@ -153,10 +153,30 @@ async def licht(b):
     ck('keine Skriptfehler (Licht-Abenteuer)', not errs, errs[:3])
     await pg.close()
 
+async def vorlesen(b):
+    pg = await b.new_page(viewport={'width': 1180, 'height': 820}); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+    await pg.add_init_script("""(()=>{window.GESAGT=[];const S=window.speechSynthesis;
+      S.speak=u=>{GESAGT.push(u.text);setTimeout(()=>u.onend&&u.onend(),50)};S.cancel=()=>{};S.getVoices=()=>[]})()""")
+    await pg.clock.install(time='2026-12-10T09:00:00'); await pg.goto('file://' + HTML); await pg.wait_for_timeout(300)
+    await pg.click('.wahl[data-l="s%d"]' % STUFE); await pg.click('.ktuer[data-n="2"]')
+    await pg.click('#btnTon'); await pg.wait_for_timeout(60)
+    ck('Vorlesen: erster Satz leuchtet', await pg.locator('#tuerBody .liest').count() == 1)
+    await pg.wait_for_timeout(2500)
+    n = await pg.locator('#tuerBody .lesetext > span, #tuerBody .tuertext .wchips:not(.klein) .chip1').count()
+    ck('Vorlesen: ganzer Text der Stufe gesprochen (%d Teile)' % n, len(await pg.evaluate("GESAGT")) == n and n > 0, await pg.evaluate("GESAGT"))
+    await pg.click('#tuerBody .tippbar >> nth=1'); await pg.wait_for_timeout(100)
+    ck('Antippen liest einzelnen Satz/Wort', len(await pg.evaluate("GESAGT")) == n + 1)
+    await pg.click('#btnAufg'); await pg.wait_for_timeout(200)
+    k = await pg.locator('#task .sprich').count()
+    ck('Aufgabe: Lautsprecher nur an der Frage (höchstens 1)', k <= 1 and await pg.locator('#answers .sprich').count() == 0)
+    if k: await pg.click('#task .sprich'); await pg.wait_for_timeout(150); ck('Frage wird vorgelesen', len(await pg.evaluate("GESAGT")) == n + 2)
+    ck('keine Skriptfehler (Vorlesen)', not errs, errs[:3])
+    await pg.close()
+
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch()
-        await stufenwahl(b); await licht(b)
+        await vorlesen(b); await stufenwahl(b); await licht(b)
         await b.close()
     ck.done()
 asyncio.run(main())
