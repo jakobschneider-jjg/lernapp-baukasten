@@ -693,7 +693,7 @@ const FOLGE = {
 /* ---------- 5. Medien: gebärdete Fassung (YouTube) und Vorlese-Aufnahme ----------
    video: Adresse des YouTube-Videos (leer = „Video kommt bald“); vMarke: Tür → Startsekunde.
    Das Video enthält den Originaltext (gebärdet, später mit Tonspur). „Vorlesen“ liest dagegen die App-Texte mit der iPad-Stimme. */
-const MEDIEN = { video: "https://youtu.be/aTycjchdpZw", vMarke: {} };
+const MEDIEN = { video: "", vMarke: {} };   /* leer = kein Video-Knopf (Weitergabe-Fassung). Die Klassen-Fassung setzt das Video erst beim Bauen (mk.sh), nie im Repository. */
 
 /* ---------- 6. Aufgaben bauen ---------- */
 const STUFEN = ["s1", "s2", "s3", "s4"];
@@ -833,7 +833,7 @@ function renderTuer() {
   } else { links = scene(t.n); rechts = escKnopfHTML(t.n) + textHTML(t.n, lv) + (lv > 1 && TEXT[t.n][1].some(k => gb(k)) ? '<div class="wchips klein">' + TEXT[t.n][1].map(k => '<span class="chip1">' + gb(k, "mini") + '<b>' + W[k].w + '</b></span>').join("") + '</div>' : ""); }
   $("tuerBody").innerHTML = '<div class="tuerbild card">' + links + '</div><div class="tuertext card">' + rechts + '</div>';
   $("tuerKnoepfe").innerHTML = (t.rev ? "" : (STIMME.da ? '<button class="medbtn" id="btnTon">' + SVG_TON + '<span>Vorlesen</span></button>' : "")
-    + '<button class="medbtn" id="btnDgs">' + SVG_DGS + '<span>Gebärden-Video</span></button>')
+    + (MEDIEN.video ? '<button class="medbtn" id="btnDgs">' + SVG_DGS + '<span>Gebärden-Video</span></button>' : ""))
     + (p && p.done ? '<span class="tuerfertig"><span class="kst">' + SVG_STERN + '</span>' + p.stars + ' / ' + sizeOf(lvl(), "t" + t.n) + '</span>' : "")
     + '<button class="next' + (t.rev && !escTuerFertig(t.n) ? " leise" : "") + '" id="btnAufg">' + (t.rev ? "Üben" : f ? "Nochmal" : "Aufgaben") + ' ' + ICON.next + '</button>';
   const bl = $("btnLicht"); if (bl) bl.onclick = () => escOeffnen(t.n);
@@ -845,7 +845,6 @@ function renderTuer() {
   }
   $("btnAufg").onclick = () => { stopTon(); S.level = lvl(); startMission("t" + t.n); };
   const bd = $("btnDgs"); if (bd) bd.onclick = () => {
-    if (!MEDIEN.video) { note("Das Gebärden-Video kommt bald."); return; }
     const sek = MEDIEN.vMarke[t.n] || 0, u = MEDIEN.video + (MEDIEN.video.includes("?") ? "&" : "?") + "t=" + sek + "s&z=" + Date.now();
     let w = null; try { w = window.open(u, "_blank"); } catch (e) { } if (!w) note("Das Video lässt sich hier nicht öffnen.");
   };
