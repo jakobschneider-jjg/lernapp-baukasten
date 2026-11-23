@@ -13,6 +13,7 @@ function buildTeacher() {
   let h = switchHTML("swAll", APP.unlockAllLabel || "Alle Stufen öffnen");
   if (APP.teacher && APP.teacher.html) h += '<div id="appTeach">' + APP.teacher.html() + '</div>'; /* eigene Schalter der App */
   Object.entries(APP.locks || {}).forEach(([id, L]) => { h += switchHTML("swLock_" + id, L.switchLabel || (L.label + " öffnen")); });
+  if (hasVideos()) h += switchHTML("swVid", APP.videoSwitchLabel || "Gebärdenvideos");
   if (APP.track) h += switchHTML("swTrack", APP.track.switchLabel || (APP.track.label + " auf diesem Gerät"));
   $("switches").innerHTML = h;
   /* Codes zum Zeigen an der Tafel (nur nach Lehrkraft-Code sichtbar) */
@@ -23,6 +24,9 @@ function buildTeacher() {
   Object.entries(APP.locks || {}).forEach(([id, L]) => $("swLock_" + id).addEventListener("click", () => {
     S.locksOpen[id] = !S.locksOpen[id]; save(); renderSwitches(); toast(S.locksOpen[id] ? L.label + ": offen." : L.label + ": wieder gesperrt.");
   }));
+  if (hasVideos()) $("swVid").addEventListener("click", () => {
+    S.vidOff = !S.vidOff; save(); renderSwitches(); toast(S.vidOff ? "Gebärdenvideos aus." : "Gebärdenvideos an.");
+  });
   if (APP.track) $("swTrack").addEventListener("click", () => {
     S.track = !S.track; save(); sendScore(); renderSwitches(); toast(S.track ? APP.track.label + " an: Startseite zeigt nur diese Schiene." : APP.track.label + " aus.");
   });
@@ -41,7 +45,7 @@ function buildTeacher() {
   $("closeInfo").addEventListener("click", closeInfo);
   $("resetAll").addEventListener("click", () => { $("resetYes").hidden = false; });
   $("resetYes").addEventListener("click", () => {
-    const keep = { track: S.track }; (APP.keepOnReset || []).forEach(k => { keep[k] = S[k]; }); applyState(keep); save(); sendScore(); $("resetYes").hidden = true; renderSwitches(); toast("Fortschritt gelöscht.");
+    const keep = { track: S.track, vidOff: S.vidOff }; (APP.keepOnReset || []).forEach(k => { keep[k] = S[k]; }); applyState(keep); save(); sendScore(); $("resetYes").hidden = true; renderSwitches(); toast("Fortschritt gelöscht.");
   });
   $("infoTitle").textContent = APP.title + " · Lehrkraft";
   $("infoBody").innerHTML = (APP.info || "") + GENERIC_INFO;
@@ -55,6 +59,7 @@ function renderSwitches() {
   $("swAll").classList.toggle("on", !!S.unlockAll);
   Object.keys(APP.locks || {}).forEach(id => $("swLock_" + id).classList.toggle("on", !!S.locksOpen[id]));
   if (APP.track) $("swTrack").classList.toggle("on", !!S.track);
+  if (hasVideos()) $("swVid").classList.toggle("on", !S.vidOff);
   if (APP.teacher && APP.teacher.render) APP.teacher.render($("appTeach"));
 }
 function openInfo() { $("lvStore").textContent = lvStorageText(); pin = ""; $("teachLock").hidden = false; $("teachOpen").hidden = true; $("resetYes").hidden = true; $("toast").textContent = ""; renderPin(); $("info").hidden = false; }

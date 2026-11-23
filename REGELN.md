@@ -36,6 +36,13 @@ Neue Erfahrungen hier ergänzen – mit Datum und Quelle (z. B. „Reflexion Geo
     (Rückmeldung Jakob: ca. 57 statt 50 Schläge pro Minute spielt sich besser). Echtes Trommeln/Klatschen kann die App nicht prüfen –
     deshalb zusätzlich ungeprüfte „Spiel mit!“-Runden anbieten.
 
+14. **Gebärdenvideos für die Frage, nicht für die Lösung** (Körper-Profi/Körper-Werkstatt, Nov. 2026): kurz (5–10 s), ohne
+    Antwortmöglichkeiten, Frage ohne Namen des Gegenstands, wenn ein Clip für viele Aufgaben passen soll (z. B. „Wie viele
+    Ecken?“). Videos nur dort einsetzen, wo die Gebärde genau die Frage der Aufgabe stellt – eine abweichende Frage verwirrt.
+    Klein und stumm in Schleife, antippen = groß und verschiebbar; Schalter im Lehrkraft-Bereich (z. B. aus für LS-Kinder ohne DGS).
+    **Quellen:** eigene Aufnahmen nach der Drehliste; für **einzelne gebärdete Wörter** auch **gebaerdenlernen.de**
+    (CC BY-NC-SA laut Jakob; Quelle nennen, nicht kommerziell, gleiche Lizenz).
+
 ## Technik
 
 1. Eine HTML-Datei, alles eingebettet (Gebärden als JPEG-Daten, 360 × 270, Qualität 72). Läuft offline.
@@ -61,6 +68,12 @@ Neue Erfahrungen hier ergänzen – mit Datum und Quelle (z. B. „Reflexion Geo
     eigenen Unterricht. Beide Fassungen mit gleicher `APP.id` und LearningView-Schnittstelle; beide testen.
 13. **Tests mit Zeitablauf** (Vorspielen, Mitspielen): auf das tatsächliche Ende der Runde warten, nicht auf eine sichtbare Meldung;
     Overlays nach einer Mission (z. B. Sticker-Auswahl) im Test bedienen.
+
+14. **Videos in LearningView einbetten, nicht von YouTube laden:** LearningView lädt in eingebetteten Aufgaben keinen
+    YouTube-Player (bleibt leer, keine Fehlermeldung; Test Jakob 23.11.2026). Deshalb Videos über `--videos` in die Datei
+    (640 × 360, ohne Ton, CRF 26 ≈ 30–60 KB/s; Wiedergabe als Blob-URL, läuft auch im abgeschirmten Rahmen). YouTube
+    (youtube-nocookie.com) nur für öffentliche Seiten wie GitHub Pages; dort die Schleife selbst steuern statt mit
+    `loop=1&playlist=…` (ein Video meldete beim Neustart fälschlich „privat“).
 
 ## Offene Fragen (bitte bei Gelegenheit testen)
 
