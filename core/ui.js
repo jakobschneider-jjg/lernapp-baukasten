@@ -40,6 +40,7 @@ const ICON = {
 
 /* Bildschirmwechsel: Startseite je nach LearningView-Modus umleiten */
 function go(id) {
+  if (id !== "task" && typeof vidClose === "function") vidClose(false); /* großes Gebärdenvideo schließen, wenn die Aufgabe verlassen wird */
   if (typeof APP !== "undefined" && APP.route) id = APP.route(id) || id; /* App kann Bildschirme umleiten (z. B. "map" auf einen eigenen Bildschirm) */
   if (id === "start" && typeof LV !== "undefined" && LV.mode === "class") id = "lvclass";
   if (id === "start" && typeof LV !== "undefined" && LV.mode === "studentReview") id = "lvreview";

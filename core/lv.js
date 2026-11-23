@@ -4,7 +4,7 @@
    - Modi: student | studentReview | class | preview (aus window.learningView.mode)
    - außerhalb eines Rahmens: "local" (Browser-Speicher, nur als Notlösung)
    ========================================================================== */
-const DEFAULT_STATE = () => ({ v: 1, level: null, prog: {}, unlockAll: false, opened: {}, locksOpen: {}, track: false, stats: {}, t: 0 });
+const DEFAULT_STATE = () => ({ v: 1, level: null, prog: {}, unlockAll: false, opened: {}, locksOpen: {}, track: false, vidOff: false, stats: {}, t: 0 });
 let S = DEFAULT_STATE();
 function applyState(o) {
   const d = DEFAULT_STATE(); S = Object.assign(d, (o && typeof o === "object") ? o : {});

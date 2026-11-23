@@ -46,7 +46,8 @@ function tNamen(id, pool) {
 }
 function tEcken(id) {
   const n = F[id].E, nums = shuffle([n].concat(pickOthers([0, 3, 4, 5, 6], n, 3)));
-  return { prompt: sign("ECKE") + ' <b>?</b>', show: shapeSVG(id), layout: "nums",
+  /* Gebärdenvideo zur Frage, falls beim Bauen mit --videos eingebettet; sonst das Gebärdenbild */
+  return { prompt: signVid("FRAGE_ECKEN", sign("ECKE")) + ' <b>?</b>', show: shapeSVG(id), layout: "nums",
     answers: nums.map(v => ({ v: String(v), html: '<span class="num">' + v + '</span>' })), answer: String(n),
     hint: id === "kreis" ? { wait: { icon: ICON.eye, ms: 2500, text: "Fahre mit dem Finger am Rand entlang." } }
       : { tap: { show: shapeSVG(id, { taps: true }), target: n, sign: sign("ECKE", "mini"), text: "Tippe jede Ecke an." } },
@@ -94,6 +95,7 @@ const APP = {
   title: "Formen-Profi",
   subtitle: "Starte mit ★. Sammle Sterne für die nächste Stufe.",
   credit: "mit KI erstellt · geprüft: [Lehrkraft eintragen]",
+  videoCredit: "Gebärdenvideos: [Quelle eintragen, z. B. gebaerdenlernen.de, CC BY-NC-SA]",
   crownLabel: "Formen-Profi",
   hero: () => ["dreieck", "kreis", "quadrat"].map((x, i) => shapeSVG(x, { cls: "mini", color: COLORS[i] })).join(""),
   unlockShare: 0.7,

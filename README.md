@@ -20,6 +20,7 @@ Aufgabe angehängt werden. Dann speichert LearningView den Lernstand jedes Kinde
 | Hilfen statt Raten | Nach dem 1. Fehler sind die Antworten gesperrt, bis die Hilfe genutzt wurde (Zählhilfe: alles antippen · Wartehilfe: kurz hinschauen). Nach dem 2. Fehler zeigt die App die Lösung, die Aufgabe kommt am Ende ohne Stern noch einmal. |
 | Freischalt-Codes | Missionen bleiben gesperrt, bis die Klasse einen Bild-Code eingibt (z. B. erst nach dem Falten in der Stunde). |
 | Schiene | Stark reduzierte eigene Spur für ein Kind (z. B. Förderschwerpunkt Geistige Entwicklung), nur auf dessen Gerät eingeschaltet. |
+| Gebärdenvideos | `signVid('NAME', ersatz)` zeigt die Frage als kurzes Gebärdenvideo (stumm, Schleife). Antippen öffnet es groß als verschiebbares Fenster mit Pause, Langsam und drei Größen. Schalter im Lehrkraft-Bereich; ohne Video erscheint der Ersatz (z. B. das Gebärdenbild). |
 | Tafel | „Klasse gegen Lehrkraft“ mit Kartenstapeln für die digitale Tafel. |
 | Lehrkraft-Bereich | „Info“ → Code → Schalter (alle Stufen, Sperren, Schiene, Fortschritt löschen) und die Bild-Codes zum Zeigen an der Tafel. |
 | LearningView | Lernstand speichern und laden, Prozentwert auf der Kachel, Klassenübersicht, Einzelansicht, Vorschau. |
@@ -62,6 +63,9 @@ python3 tests/test_learningview.py dist/meine-app.html                  # 4. pr�
 * `--images` – **lokaler** Ordner mit lizenzierten App-Bildern `NAME.png` (z. B. Illustrationen mit Erlaubnis des Verlags).
   Eingebettet werden nur Namen, die im Inhalt als `imgSrc('NAME')` vorkommen (PNG mit Transparenz, max. 320 px).
   Fehlt ein Bild, zeigt die App ihre eigene Zeichnung.
+* `--videos` – **lokaler** Ordner mit Gebärdenvideos `NAME.mp4/.mov`. Eingebettet werden nur Namen, die im Inhalt als
+  `signVid('NAME', …)` vorkommen; build.py verkleinert sie mit ffmpeg auf 640 × 360 ohne Ton (ca. 30–60 KB pro Sekunde).
+  Fehlt ein Video, erscheint der Ersatz.
 * `--no-signs` – Gebärdenfelder ganz weglassen (keine Platzhalter). Für eine **Fassung zum Weitergeben**, die keine
   lizenzierten Bilder enthalten darf.
 * Ergebnis: `dist/<id>.html` (Ordner `dist/` wird nicht eingecheckt).
@@ -139,6 +143,11 @@ Hilfen (`hint`):
 
 Bei nur zwei Antworten wird eine falsche nicht ausgegraut (sonst wäre der 2. Versuch geschenkt).
 
+**Gebärdenvideo zur Frage:** `prompt: signVid("FRAGE_ECKEN", sign("ECKE")) + " ?"` – mit eingebettetem Video und
+eingeschaltetem Schalter das Video, sonst der Ersatz (zweites Argument). Funktioniert auch in `show`. Eigene Bildschirme
+rufen nach dem Zeichnen `vidMountAll(bereich)` auf. Quellenangabe in `APP.videoCredit` (erscheint im Fuß, nur wenn Videos
+eingebettet sind). Das Video zeigt die Frage, nicht die Lösung – es ist deshalb immer verfügbar, auch während der Antwortsperre.
+
 Weitere Aufgabenarten (statt `answers`/`answer`):
 
 * **Bau-Aufgabe** `build: { n, answer: [...], view(arr, {sel, solution}) -> HTML mit [data-slot], palette: [{v, html}] | cycle: ["", "x", …] }`
@@ -168,6 +177,11 @@ aus dem Elternfenster an und schreibt Namen aus LearningView nur als Text (nie a
 * **Gebärdenbilder** sind meist lizenziert (z. B. © Verlag Karin Kestner: nur für den eigenen Unterricht).
   Sie gehören **nicht** in dieses Repository und nicht in öffentlich geteilte Builds. Deshalb `--signs` mit lokalem Ordner
   und `dist/` in `.gitignore`.
+* **Gebärdenvideos** über `--videos` nur lokal: Sie zeigen Personen (Einverständnis für den Einsatz klären) oder stehen
+  unter einer Lizenz. Eigene Aufnahmen: nur in den eigenen Klassen bzw. mit Einverständnis der gezeigten Person weitergeben.
+  **gebaerdenlernen.de** (einzelne gebärdete Wörter) steht laut Jakob unter **CC BY-NC-SA** (Version und gewünschte
+  Namensnennung auf der Seite prüfen): Quelle in `APP.videoCredit` nennen, nicht kommerziell, eine veränderte (verkleinerte,
+  geschnittene) Fassung unter derselben Lizenz weitergeben. Auch diese Videos nicht ins Repository – die gebaute Datei ist der Ort.
 * Lehrkraft-Codes nie einchecken.
 * Code: MIT-Lizenz (siehe `LICENSE`).
 
@@ -181,6 +195,9 @@ aus dem Elternfenster an und schreibt Namen aus LearningView nur als Text (nie a
   Lehrkraft-Code, Schiene, Löschen, Tafel.
 * `tests/test_rhythmus.py <html> <code> [bildordner]` – Klicktest der Rhythmus-App: alle Missionen (auch Mitspielen mit
   getakteten Taps), Codes, Extras, Karte und Sticker, Tafel, Starter-Schiene; Bildschirmfotos in den Bildordner.
+* `tests/test_video.py <html> <code>` – Gebärdenvideo: läuft stumm in der Frage, großes Fenster (verschieben, Größe, Pause,
+  Langsam), bleibt bei der nächsten Aufgabe, schließt beim Verlassen, Schalter aus → Ersatz, Löschen behält den Schalter.
+  run_all.sh erzeugt dafür ein Testbild-Video mit ffmpeg.
 * `tests/test_learningview.py <html>` – für jede App nutzbar (wählt selbst Auswahl-Missionen der ersten Stufe):
   nachgebautes LearningView (Herkunft `https://learningview.org`, sandbox-iframe):
   Schüler-Modus, Neuladen, Speicherfehler, Einzelansicht, Klassenübersicht (inkl. HTML in Namen, kaputte Daten,

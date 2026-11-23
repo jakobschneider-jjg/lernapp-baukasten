@@ -13,7 +13,7 @@
   $("codeBack").onclick = () => go(LOCK_FROM || "map");
   $("codeClear").onclick = () => { codeIn = []; renderCode(); };
   $("lvRefresh").addEventListener("click", requestClass);
-  $("ki").textContent = APP.credit || "mit KI erstellt";
+  $("ki").textContent = (APP.credit || "mit KI erstellt") + (hasVideos() && APP.videoCredit ? " · " + APP.videoCredit : "");
   $("lvTitle").textContent = APP.title + " · Klassenübersicht";
   fxInit(); computeSizes(); buildTeacher(); boardInit(); lvInit();
 })();

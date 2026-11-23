@@ -127,7 +127,7 @@ function renderTask() {
   const helpUrl = APP.helpLink ? APP.helpLink(t) : null;
   const helpBtn = helpUrl ? '<button class="iconbtn helpbtn" id="helpBtn" aria-label="Hilfe">' + ICON.help + '</button>' : "";
   pr.innerHTML = (t.again ? '<span class="againtag">' + ICON.again + '</span>' : "") + (t.prompt || "");
-  const setShow = html => { show.style.display = html ? "" : "none"; show.innerHTML = (html || "") + (html ? helpBtn : ""); const hb = $("helpBtn"); if (hb) hb.onclick = openHelp; };
+  const setShow = html => { show.style.display = html ? "" : "none"; show.innerHTML = (html || "") + (html ? helpBtn : ""); const hb = $("helpBtn"); if (hb) hb.onclick = openHelp; vidMountAll($("task")); };
   function openHelp() { let w = null; try { w = window.open(uniqueUrl(helpUrl), "_blank"); } catch (e) { } if (!w) note("Die Hilfe-Seite lässt sich hier nicht öffnen."); }
   setShow(t.show);
   const answer = String(t.answer);

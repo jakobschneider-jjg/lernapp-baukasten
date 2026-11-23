@@ -12,6 +12,8 @@ Aufruf:
            gehören NIE ins Repository; dist/ ist deshalb in .gitignore.
   --out    Zieldatei (Standard: dist/<app-id>.html)
   --images Lokaler Ordner mit lizenzierten App-Bildern (NAME.png); eingebettet für imgSrc('NAME'). Nie ins Repository.
+  --videos Lokaler Ordner mit Gebärdenvideos (NAME.mp4/.mov); eingebettet für signVid('NAME'), verkleinert auf
+           640 × 360 ohne Ton (ffmpeg). Nie ins Repository (Personen im Bild, Lizenzen).
   --no-signs  Gebärdenfelder ganz weglassen (Fassung zum Weitergeben ohne lizenzierte Gebärdenbilder)
 
 Prüfungen: alle Platzhalter ersetzt, Syntaxprüfung mit node --check, fehlende Gebärden werden gemeldet.
@@ -19,7 +21,7 @@ Prüfungen: alle Platzhalter ersetzt, Syntaxprüfung mit node --check, fehlende 
 import argparse, base64, io, json, os, re, secrets, subprocess, sys, tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CORE_JS = ["ui.js", "lv.js", "game.js", "teacher.js", "board.js", "classview.js"]  # Reihenfolge wichtig
+CORE_JS = ["ui.js", "lv.js", "video.js", "game.js", "teacher.js", "board.js", "classview.js"]  # Reihenfolge wichtig
 BOOT_JS = "boot.js"
 
 
@@ -61,6 +63,27 @@ def find_sign(folder, word):
     return None
 
 
+def find_video(folder, word):
+    for name in os.listdir(folder):
+        stem, ext = os.path.splitext(name)
+        if stem.upper() == word.upper() and ext.lower() in (".mp4", ".mov", ".m4v"):
+            return os.path.join(folder, name)
+    return None
+
+
+def video_data(path):
+    """Video auf 640×360 ohne Ton verkleinern (H.264, CRF 26) und als data:-URL zurückgeben."""
+    with tempfile.TemporaryDirectory() as t:
+        o = os.path.join(t, "v.mp4")
+        try:
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", path, "-an", "-vf", "scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2,fps=30",
+                            "-c:v", "libx264", "-profile:v", "main", "-level", "3.1", "-pix_fmt", "yuv420p", "-preset", "slow", "-crf", "26",
+                            "-movflags", "+faststart", o], check=True)
+        except FileNotFoundError:
+            sys.exit("Fehler: ffmpeg wird für --videos gebraucht.")
+        return "data:video/mp4;base64," + base64.b64encode(open(o, "rb").read()).decode()
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("app", help="Ordner der App, z. B. apps/beispiel-formen")
@@ -68,6 +91,7 @@ def main():
     ap.add_argument("--signs", help="lokaler Ordner mit Gebärdenbildern")
     ap.add_argument("--out", help="Zieldatei")
     ap.add_argument("--images", help="lokaler Ordner mit lizenzierten App-Bildern (NAME.png), eingebettet für imgSrc('NAME')")
+    ap.add_argument("--videos", help="lokaler Ordner mit Gebärdenvideos (NAME.mp4/.mov), eingebettet für signVid('NAME') – verkleinert auf 640×360, ohne Ton")
     ap.add_argument("--no-signs", action="store_true", help="Gebärdenfelder ganz weglassen (z. B. Fassung zum Weitergeben)")
     a = ap.parse_args()
 
@@ -123,7 +147,16 @@ def main():
             p = find_sign(folder, w)
             if p: images[w] = image_data(p)
             else: imissing.append(w)
-    signs_js = "const SIGNS=" + json.dumps(signs, ensure_ascii=False) + ";const SIGNS_OFF=" + ("true" if a.no_signs else "false") + ";const IMAGES=" + json.dumps(images, ensure_ascii=False) + ";"
+    # Gebärdenvideos: signVid('NAME') im Inhalt; nur mit --videos aus lokalem Ordner (nie im Repository)
+    vnames = sorted(set(re.findall(r"signVid\(\s*[\"']([A-Z0-9_ÄÖÜ]+)[\"']", scan)))
+    videos, vmissing = {}, []
+    if a.videos:
+        folder = os.path.expanduser(a.videos)
+        for w in vnames:
+            p = find_video(folder, w)
+            if p: videos[w] = video_data(p)
+            else: vmissing.append(w)
+    signs_js = "const VIDEOS=" + json.dumps(videos) + ";" + "const SIGNS=" + json.dumps(signs, ensure_ascii=False) + ";const SIGNS_OFF=" + ("true" if a.no_signs else "false") + ";const IMAGES=" + json.dumps(images, ensure_ascii=False) + ";"
 
     html = read(os.path.join(ROOT, "core", "shell.html"))
     for k, v in (("{{TITLE}}", title), ("{{CSS}}", css), ("{{SIGNS}}", signs_js), ("{{JS}}", js)):
@@ -149,6 +182,8 @@ def main():
         f.write(html)
     print("Gebaut:", out, "(%d KB)" % (len(html.encode()) // 1024))
     print("Gebärden eingebettet: %d · Platzhalter: %d%s" % (len(signs), len(missing), (" (" + ", ".join(missing) + ")") if missing else "") + (" · Gebärdenfelder aus" if a.no_signs else ""))
+    if a.videos or vnames:
+        print("Gebärdenvideos eingebettet: %d%s" % (len(videos), (" · fehlen: " + ", ".join(vmissing)) if vmissing else "") + ("" if a.videos else " (ohne --videos: Ersatz wird gezeigt)"))
     if a.images or inames:
         print("App-Bilder eingebettet: %d%s" % (len(images), (" · fehlen: " + ", ".join(imissing)) if imissing else "") + ("" if a.images else " (ohne --images: eigene Zeichnungen)"))
 
