@@ -113,6 +113,7 @@ async def licht(b):
     await f.wait_for_selector('#karte:not([hidden]) [data-k="weiter"]', timeout=5000); await zu(f); await pg.wait_for_timeout(300)
     ck('Station 1 im Kalender gespeichert (+ Fehler, Tipps)', await pg.evaluate("S.esc.f[1]===1 && S.esc.fehl[1]>=2 && S.esc.tipp[1]>=2"), await pg.evaluate("JSON.stringify(S.esc)"))
     ck('Tür 4 noch nicht fertig (Station 2 fehlt)', not await pg.evaluate("fertig(4)"))
+    ck('nach Station 1: Karte, Station 2 leuchtet', await pg.locator('#escRahmen').count() == 1 and await f.locator('.wegpunkt.neu').count() == 1 and await f.evaluate("document.querySelector('.wegpunkt.neu').innerText.includes('2')"))
     await tap(f, '.wegpunkt >> nth=1'); await los(f); await pg.wait_for_timeout(300)
     await tap(f, '.s-zettel'); await zu(f)
     await tap(f, '.s-fenster'); await pg.wait_for_timeout(400); await pg.mouse.move(600, 600)
@@ -140,7 +141,12 @@ async def licht(b):
     for g in range(3):
         await f.wait_for_selector('.wegpfeil', timeout=8000); await tap(f, '.wegpfeil[data-gut="1"]'); await pg.wait_for_timeout(2300)
     await f.wait_for_selector('#karte:not([hidden]) [data-k="weiter"]', timeout=8000); await f.click('#karte [data-k="weiter"]')
-    await tuer_ende(pg, f, 14)
+    # Tür 14: nach dem Abenteuer „Karte“ und dann „◀ Kalender“ → Tür-Seite (nicht ins Üben), Üben leuchtet
+    await f.wait_for_selector('#karte:not([hidden]) [data-k="zu"]', timeout=8000); await f.click('#karte [data-k="zu"]'); await pg.wait_for_timeout(300)
+    await tap(f, '#infoBtn'); await pg.wait_for_timeout(400)
+    ck('Tür 14: „◀ Kalender“ führt zur Tür-Seite, Üben leuchtet', await scr(pg) == 'door' and await pg.locator('#btnAufg.pulsiert').count() == 1 and not await pg.evaluate("fertig(14)"))
+    await pg.click('#btnAufg'); await aufgaben(pg)
+    ck('Tür 14: nach dem Üben fertig', await scr(pg) == 'start' and await pg.locator('.ktuer.fertig[data-n="14"]').count() == 1)
     # Tür 16: Station 6 + Finale
     f = await oeffne(pg, 16)
     await tap(f, '.wegpunkt >> nth=5'); await los(f); await pg.wait_for_timeout(300); await pg.mouse.move(400, 500)
