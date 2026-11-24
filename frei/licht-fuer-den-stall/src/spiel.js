@@ -118,10 +118,12 @@ async function geschafft() {
     zeigeKarte(); const t = E.tuer[nr];
     const k = await karte('<div class="kopf">' + img("stall", "kopfico") + '<h2>Abenteuer geschafft!</h2></div>' + (s === 1 ? bildreihe(["stern", "→", "stall"]) : '<div class="lesen st' + s + '"><p>' + "Super! Jetzt geht es weiter." + '</p></div>'),
       '<button class="kbtn" data-k="zu">Karte</button><button class="kbtn gross" data-k="kal">Weiter ' + img("stern", "mini") + '</button>');
-    if (k === "kal") melde({ typ: "esc-zu" });
+    if (k === "kal") melde({ typ: "esc-zu", weiter: true });   /* „Weiter“ nach der letzten Station dieser Tür: zum Üben */
     return;
   }
-  zeigeKarte(nr);
+  /* Kalender: noch eine Station an dieser Tür? Dann leuchtet sie auf der Karte. */
+  const naechste = EMB ? g.find(n => !S.fertig[n]) : null;
+  zeigeKarte(naechste || nr);
 }
 
 /* ---------- Schloss (Zahlen-, Pfeil-, Bilderschloss) ---------- */
