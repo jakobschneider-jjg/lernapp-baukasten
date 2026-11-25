@@ -48,7 +48,12 @@ async def open_lv(p, cfg):
     await pg.goto("https://learningview.org/mock")
     await pg.evaluate("cfg=>setup(cfg)", cfg)
     await pg.wait_for_timeout(600)
-    fr = [f for f in pg.frames if "content.test" in f.url][0]
+    for _ in range(60):  # große Dateien (eingebettete Videos) brauchen etwas länger
+        fl = [f for f in pg.frames if "content.test" in f.url]
+        if fl: break
+        await pg.wait_for_timeout(250)
+    fr = fl[0]
+    await fr.wait_for_function("typeof APP !== 'undefined' && !!document.querySelector('.screen.on')", timeout=20000)
     return b, pg, fr, errs
 
 async def types(pg):
@@ -63,17 +68,20 @@ async def main():
     async with async_playwright() as p:
         print("A Schüler, erster Start")
         b, pg, fr, errs = await open_lv(p, {"mode": "student"}); await pg.wait_for_timeout(500)
+        await fr.wait_for_function("document.querySelector('.screen.on') && document.querySelector('.screen.on').id === 'start'", timeout=15000)
         c("A Startseite nach Laden", await screen(fr) == "start")
+        global L0
+        L0 = await fr.evaluate("APP.levels[0].id")  # erste Stufe (z. B. „start“ oder ein Wortpaket)
         global M1, M2
         ch = await fr.evaluate("APP.levels[0].missions.filter(m=>{const t=APP.buildTasks(APP.levels[0].id,m)[0];return t&&t.answers&&!t.build&&!t.custom})")
         M1, M2 = ch[0], (ch[1] if len(ch) > 1 else ch[0])  # nur Auswahl-Missionen; gibt es nur eine, wird sie zweimal gespielt
         n2 = await fr.evaluate("sizeOf(APP.levels[0].id, %r)" % M2)
-        await fr.click("[data-l=start]"); await play(fr, M1, wrong_first=True); await play(fr, M2)
+        await fr.click("[data-l=%s]" % L0); await play(fr, M1, wrong_first=True); await play(fr, M2)
         await pg.wait_for_timeout(5000)
         st = json.loads(await pg.evaluate("STORE"))
-        c("A Lernstand gespeichert", st["prog"]["start"][M1]["done"] and st["prog"]["start"][M2]["stars"] == n2)
+        c("A Lernstand gespeichert", st["prog"][L0][M1]["done"] and st["prog"][L0][M2]["stars"] == n2)
         stufen = await fr.evaluate("APP.errorFlow === 'stufen'")  # Stufen-Ablauf: 1. Fehler = nur Wartezeit, keine Hilfe
-        c("A Statistik gespeichert", st["stats"]["start"]["hint"] == (0 if stufen else 1) and st["stats"]["start"]["n"] > 0, st["stats"])
+        c("A Statistik gespeichert", st["stats"][L0]["hint"] == (0 if stufen else 1) and st["stats"][L0]["n"] > 0, st["stats"])
         sc = await pg.evaluate("SCORES")
         c("A Ergebnis gesendet und steigend", len(sc) >= 2 and sc[-1] > 0 and sc == sorted(sc), sc)
         c("A Speicherregeln (eins zur Zeit, ≥ 2 s)", await pg.evaluate("VIOL") == [], await pg.evaluate("VIOL"))
@@ -81,20 +89,20 @@ async def main():
         c("A Ablauf setDialogSize → getAnswerData → saveAnswerData", t[:2] == ["setDialogSize", "getAnswerData"] and "saveAnswerData" in t, t)
         c("A keine Namen im Lernstand", not any(k in json.dumps(st) for k in ('"name"', '"surname"', '"studentId"')))
         c("A keine JS-Fehler", not errs, errs)
-        STARS_A = await fr.evaluate("totalStars('start')"); OPEN_A = await fr.evaluate("unlocked(APP.levels[1].id)")
+        STARS_A = await fr.evaluate("totalStars('%s')" % L0); OPEN_A = await fr.evaluate("unlocked(APP.levels[1].id)")
         HAS_TRACK = await fr.evaluate("!!APP.track")  # Apps ohne Schiene: Schienen-Prüfung entfällt
         TID, TM, TTOT, TLABEL = await fr.evaluate("APP.track ? [APP.track.id, APP.track.missions[0], levelTotalAll(APP.track.id), APP.track.label] : [APP.levels[0].id, APP.levels[0].missions[0], 0, '']")
         saved = await pg.evaluate("STORE"); await b.close()
 
         print("B Neu öffnen mit gespeichertem Stand")
         b, pg, fr, errs = await open_lv(p, {"mode": "student", "initData": saved}); await pg.wait_for_timeout(500)
-        c("B Sterne wieder da", await fr.evaluate("totalStars('start')") == STARS_A > 0)
+        c("B Sterne wieder da", await fr.evaluate("totalStars('%s')" % L0) == STARS_A > 0)
         c("B Stufe 1 wie zuvor", await fr.evaluate("unlocked(APP.levels[1].id)") == OPEN_A)
         await b.close()
 
         print("C Speicherfehler → neuer Versuch")
         b, pg, fr, errs = await open_lv(p, {"mode": "student", "saveFailOnce": True}); await pg.wait_for_timeout(500)
-        await fr.click("[data-l=start]"); await play(fr, M2); await pg.wait_for_timeout(900)
+        await fr.click("[data-l=%s]" % L0); await play(fr, M2); await pg.wait_for_timeout(900)
         c("C Fehler angezeigt", await fr.evaluate("LV.statusCode") == "SAVE_FAILED")
         await pg.wait_for_timeout(7000)
         c("C nach neuem Versuch gespeichert", await pg.evaluate("STORE!==null") and await fr.evaluate("LV.statusCode") == "ok")
@@ -132,7 +140,7 @@ async def main():
 
         print("F Vorschau")
         b, pg, fr, errs = await open_lv(p, {"mode": "preview"}); await pg.wait_for_timeout(400)
-        await fr.click("[data-l=start]"); await play(fr, M2); await pg.wait_for_timeout(2500)
+        await fr.click("[data-l=%s]" % L0); await play(fr, M2); await pg.wait_for_timeout(2500)
         t = await types(pg)
         c("F speichert nicht, sendet kein Ergebnis", "saveAnswerData" not in t and "result" not in t, t)
         c("F Hinweis Vorschau", "Vorschau" in await fr.evaluate("$('lvstat').textContent"))
@@ -149,7 +157,7 @@ async def main():
         b, pg, fr, errs = await open_lv(p, {"mode": "student", "initData": saved}); await pg.wait_for_timeout(500)
         await fr.evaluate('''()=>{const f=document.createElement("iframe");f.srcdoc=%s;document.body.appendChild(f)}''' % json.dumps(FAKE))
         await pg.wait_for_timeout(600)
-        c("H Lernstand nicht von fremder Quelle überschrieben", await fr.evaluate("totalStars('start')") == STARS_A)
+        c("H Lernstand nicht von fremder Quelle überschrieben", await fr.evaluate("totalStars('%s')" % L0) == STARS_A)
         await b.close()
     c.done()
 

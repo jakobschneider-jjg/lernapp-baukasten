@@ -155,6 +155,7 @@ function renderTask() {
     node.classList.add("right"); M.locked = true; clearTimeout(M.wt); ans.classList.remove("locked", "dim");
     const star = !t.again && !(flow3 && tries >= 2); /* Stufen-Ablauf: nach der Pflicht-Hilfe gelöst = ohne Stern */
     if (!t.again) { if (star) M.stars++; M.res[M.i] = star ? "s" : "h"; const st = stat(S.level); st.n++; if (tries === 0) st.first++; } else M.res[M.i] = "r";
+    if (APP.onTaskResult) APP.onTaskResult(t, M.res[M.i], tries); /* optional: Ergebnis je Aufgabe (z. B. Lernstand je Wort) */
     renderDots(); burst(node);
     showFb("good", '<span class="fbicon">' + (star ? ICON.star : ICON.ok) + '</span><span class="grow">Richtig!' + (t.goodText ? " " + t.goodText : "") + '</span>');
   }
@@ -170,6 +171,7 @@ function renderTask() {
       if (tries < 2) { runHint(); return; }
     }
     M.locked = true; M.res[M.i] = t.again ? "r" : "d"; clearTimeout(M.wt);
+    if (APP.onTaskResult) APP.onTaskResult(t, M.res[M.i], tries);
     ans.classList.remove("locked", "dim");
     if (t.build) { M.cur = t.build.answer.slice(); drawBuild(true); }
     else if (t.custom) { if (t.custom.solution) t.custom.solution(ctx); }

@@ -41,8 +41,9 @@ core/        gemeinsamer Code (nicht pro App ändern)
 apps/
   beispiel-formen/content.js   Beispiel-App „Formen-Profi“ = Vorlage
   rhythmus/content.js, app.css Rhythmus-Trainer (Tiernotation → Trommelraster, Mitspielen, „Das kann ich“-Karte)
-  lesewerkstatt/               Prototyp Leselern-App „Lesewerkstatt: Tiere“ (Gebärde ↔ Bild ↔ Wort ↔ Fingeralphabet, Kreidestil,
-                               gestufter Fehlerablauf). src/ bearbeiten, dann zusammensetzen.py → content.js; Videos mit videos_vorbereiten.py
+  lesewerkstatt/               Leselern-App „Lesewerkstatt“ (Gebärde ↔ Bild ↔ Wort ↔ Fingeralphabet, Kreidestil, gestufter Fehlerablauf,
+                               Lernstand je Wort). Wörter in woerter.csv (Einzahl, Pakete = Stufen), Zeichnungen in src/bilder.js,
+                               dann zusammensetzen.py → content.js; Videos: videos_vorbereiten.py --liste woerter.csv --nur-neue
 tools/build.py                 baut dist/<app>.html
 tests/                         Klicktests (Playwright), LearningView-Nachbau
 run_all.sh                     baut die Beispiel-App und führt alle Tests aus
@@ -123,6 +124,7 @@ Haken für Apps mit eigenem Aufbau (alle optional, Beispiel: `apps/weihnachten-i
   Standard 5 s, im Lehrkraft-Bereich 3/5/8 s), dann neuer Versuch; 2. Fehler → Hilfe ist Pflicht; 3. Fehler → Lösung, kommt am Ende
   nochmal. Stern nur im 1./2. Versuch ohne Hilfe, nichts wird ausgegraut. Bei zwei Antworten und in der Schiene gilt der Standard.
   `waitText` = Text beim Zeitbalken. Ohne `errorFlow` bleibt alles wie bisher.
+* `onTaskResult(task, res, tries)` – nach jeder Aufgabe (`res`: "s" Stern, "h" mit Hilfe, "d" Lösung, "r" Wiederholung), z. B. für den Lernstand je Wort.
 * `classExtra(box, rows)` – eigener Bereich über der Tabelle der Klassenübersicht (z. B. Klassenhimmel). `rows` kommt von LearningView: Namen nur per `textContent` einsetzen, nichts davon speichern.
 
 ### Aufgabe

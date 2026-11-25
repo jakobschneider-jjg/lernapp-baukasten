@@ -1,7 +1,8 @@
-"""Klicktest der Lesewerkstatt (Prototyp) mit gestuftem Fehlerablauf (APP.errorFlow = "stufen").
+"""Klicktest der Lesewerkstatt mit gestuftem Fehlerablauf (APP.errorFlow = "stufen") und Lernstand je Wort.
 Aufruf: python3 tests/test_lesewerkstatt.py <html> <code> [bildordner]
 Prüft: Wartezeit nach dem 1. Fehler, Pflicht-Hilfe nach dem 2., Lösung nach dem 3., Sterne, nichts ausgegraut,
-Wiederholung am Ende, Wartezeit im Lehrkraft-Bereich, alle Missionen beider Stufen, Lexikon, Tafel, Videos.
+Wiederholung am Ende, Wartezeit im Lehrkraft-Bereich, Wortpakete, Wortstatus (geübt/sicher/gefestigt), Wiederholen,
+„Meine Wörter“, Lexikon, Tafel, Klassenübersichts-Text, Videos an/aus.
 """
 import asyncio, sys, os
 from playwright.async_api import async_playwright
@@ -54,7 +55,9 @@ async def main():
         await fr.click("#closeInfo")
 
         # Mission „Wort → Bild“: alle drei Fehlerstufen
-        await fr.click("[data-l=start]"); await fr.click('[data-m="lesen"]')
+        c("Pakete als Stufen", await fr.evaluate("APP.levels.map(l=>l.id).join()") == "winter,weihnachten,tiere,wdh", await fr.evaluate("APP.levels.map(l=>l.id).join()"))
+        c("alle Pakete offen", await fr.evaluate("!document.querySelector('#levels .levelbtn.locked')"))
+        await fr.click("[data-l=winter]"); await fr.click('[data-m="lesen"]')
         c("Aufgabe offen", await screen(fr) == "task")
         c("Wort groß gezeigt", await fr.evaluate("!!document.querySelector('#show .wortgross')"))
         n0 = await fr.evaluate("M.tasks.length")
@@ -88,8 +91,9 @@ async def main():
         while await screen(fr) == "task":
             await wait_unlocked(fr, 12000); await right(fr); await fr.click("#nextBtn")
         c("Mission fertig", await screen(fr) == "done")
-        c("Sterne 4 von 6", await fr.evaluate("S.prog.start.lesen.stars") == 4, await fr.evaluate("S.prog.start.lesen"))
-        st = await fr.evaluate("S.stats.start")
+        c("Sterne 6 von 8", await fr.evaluate("S.prog.winter.lesen.stars") == 6, await fr.evaluate("S.prog.winter.lesen"))
+        c("alle 8 Winterwörter geübt", await fr.evaluate("WORTE.filter(x=>x.paket==='Winter').every(x=>S.ws[x.id]&&S.ws[x.id].s===1)"), await fr.evaluate("S.ws"))
+        st = await fr.evaluate("S.stats.winter")
         c("Statistik: 2 Hilfen, 1 Lösung", st["hint"] == 2 and st["sol"] == 1, st)
         await shot(pg, "06_fertig")
         await fr.click("#doneNext")
@@ -108,20 +112,38 @@ async def main():
                     first = False
                 await right(fr); await fr.click("#nextBtn")
             await fr.click("#doneNext")
-        c("Stufe 1 frei", await fr.evaluate("unlocked('s1')"))
-        await fr.evaluate("S.level='s1';go('map')")
-        await fr.click('[data-m="finden"]')
-        c("Stufe 1: 8 Aufgaben", await fr.evaluate("M.tasks.length") == 8)
-        await fr.click("#taskBack")
+        n2 = await fr.evaluate("Object.values(S.ws).filter(w=>w.s===2).length")
+        c("6 Wörter sicher (3× ohne Hilfe), 2 noch geübt", n2 == 6, await fr.evaluate("S.ws"))
+        c("Klassenübersicht-Text", (await fr.evaluate("APP.reached(S)")).startswith("sicher 6"), await fr.evaluate("APP.reached(S)"))
+        # Wiederholen: nur geübte Wörter; nach 8 Tagen wird ein sicheres Wort fällig und gefestigt
+        sicher = await fr.evaluate("Object.keys(S.ws).find(k=>S.ws[k].s===2)")
+        await fr.evaluate("S.ws[%r].d -= 8" % sicher)   # Zeitreise: 8 Tage zurück
+        await fr.click("#map [data-go=start]"); await fr.click("[data-l=wdh]"); await fr.click('[data-m="mix"]')
+        wids = await fr.evaluate("M.tasks.map(t=>t.wid)")
+        winter = await fr.evaluate("WORTE.filter(x=>x.paket==='Winter').map(x=>x.id)")
+        c("Wiederholen: 8 Aufgaben aus geübten Wörtern", len(wids) == 8 and all(w in winter for w in wids), wids)
+        c("Wiederholen: fälliges Wort zuerst", wids[0] == sicher, (wids, sicher))
+        while await screen(fr) == "task":
+            await right(fr); await fr.click("#nextBtn")
+        c("fälliges Wort jetzt gefestigt", await fr.evaluate("S.ws[%r].s" % sicher) == 3, await fr.evaluate("S.ws[%r]" % sicher))
+        await fr.click("#doneNext")
+        # Meine Wörter
+        await fr.click("#map [data-go=start]")
+        await fr.click('.extrabtn[data-x="meine"]')
+        c("Meine Wörter: 30 Karten", await fr.evaluate("document.querySelectorAll('.mwk').length") == 30)
+        c("Meine Wörter: Weihnachten noch neu", await fr.evaluate("[...document.querySelectorAll('.mwk')].filter(e=>e.dataset.s==='0').length") == 22)
+        await shot(pg, "07b_meine_woerter")
+        await fr.evaluate("go('start')")
 
         # Lexikon (Extra)
-        await fr.click("#map [data-go=start]")
         await fr.click('.extrabtn[data-x="lexikon"]')
-        c("Lexikon: 12 Tiere", await fr.evaluate("document.querySelectorAll('.lex button').length") == 12)
-        await fr.click('.lex button[data-k="schwein"]')
-        c("Lexikon: Gebärdenvideo", await fr.evaluate("!!document.querySelector('.lexdetail .pvid[data-vid=SCHWEIN]')"))
+        c("Lexikon: 3 Paket-Reiter", await fr.evaluate("document.querySelectorAll('.reiter button').length") == 3)
+        await fr.click('.reiter button[data-p="weihnachten"]')
+        c("Lexikon: 10 Weihnachtswörter", await fr.evaluate("document.querySelectorAll('.lex button').length") == 10)
+        await fr.click('.lex button[data-k="geschenk"]')
+        c("Lexikon: Gebärdenvideo", await fr.evaluate("!!document.querySelector('.lexdetail .pvid[data-vid=GESCHENK]')"))
         await fr.click("#lexFa")
-        c("Lexikon: Fingeralphabet", await fr.evaluate("!!document.querySelector('.lexdetail .pvid[data-vid=FA_SCHWEIN]')"))
+        c("Lexikon: Fingeralphabet", await fr.evaluate("!!document.querySelector('.lexdetail .pvid[data-vid=FA_GESCHENK]')"))
         await pg.wait_for_timeout(800); await shot(pg, "08_lexikon")
 
         # Tafel
@@ -133,7 +155,7 @@ async def main():
         # Schalter Videos aus -> Ersatz (Wort statt Video bei Gebärde → Bild)
         await fr.evaluate("go('start')")
         await enter_pin(fr, CODE); await fr.click("#swVid"); await fr.click("#closeInfo")
-        await fr.click("[data-l=start]"); await fr.click('[data-m="zeigen"]')
+        await fr.click("[data-l=weihnachten]"); await fr.click('[data-m="zeigen"]')
         c("ohne Videos: Wort als Ersatz", await fr.evaluate("!!document.querySelector('#show .wortgross') && !document.querySelector('#show .pvid')"))
         await fr.click("#taskBack")
 

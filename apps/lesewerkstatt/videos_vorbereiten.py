@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Bereitet Videos aus dem Wörterbuchpaket von gebaerdenlernen.de für die Lesewerkstatt vor (lokal, nie ins Repository).
 
-  python3 apps/lesewerkstatt/videos_vorbereiten.py --quelle "<…>/Gebaerden/video" --ziel ~/lw-videos hund katze maus
+  python3 apps/lesewerkstatt/videos_vorbereiten.py --quelle "<…>/Gebaerden/video" --ziel ~/lw-videos --liste apps/lesewerkstatt/woerter.csv
+  python3 apps/lesewerkstatt/videos_vorbereiten.py --quelle "<…>/Gebaerden/video" --ziel ~/lw-videos hund katze   (einzelne Wörter)
 
+Mit --liste: Spalten id, wort, video der Wortliste (Video = Dateiname im Paket, Fingeralphabet = das geschriebene Wort).
 Für jedes Wort entstehen zwei Dateien im Zielordner:
   HUND.mp4     die Gebärde, auf die Bewegung zugeschnitten (Ruhe vorher/nachher weg), 360 × 270, ohne Ton
   FA_HUND.mp4  das Wort im Fingeralphabet: die Buchstabenvideos (a.mp4 …, sch.mp4, ch.mp4, ae/oe/ue, sz) auf die
@@ -59,14 +61,23 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--quelle", required=True, help="Ordner video/ des Wörterbuchpakets")
     ap.add_argument("--ziel", required=True, help="Zielordner (lokal)")
-    ap.add_argument("woerter", nargs="+", help="Dateinamen ohne .mp4, z. B. hund katze")
+    ap.add_argument("--liste", help="Wortliste (CSV mit Semikolon, Spalten id;wort;…;video)")
+    ap.add_argument("--nur-neue", action="store_true", help="Wörter überspringen, deren Videos schon im Zielordner liegen")
+    ap.add_argument("woerter", nargs="*", help="Dateinamen ohne .mp4, z. B. hund katze (ohne --liste)")
     a = ap.parse_args()
+    if a.liste:
+        import csv
+        eintraege = [(r["id"], r["wort"], r["video"]) for r in csv.DictReader(open(a.liste, encoding="utf-8-sig"), delimiter=";") if r.get("id")]
+    else:
+        eintraege = [(w, w, w) for w in a.woerter]
     q, z = os.path.expanduser(a.quelle), os.path.expanduser(a.ziel); os.makedirs(z, exist_ok=True)
     cache = {}
-    for w in a.woerter:
-        s, e = wort_abschnitt(os.path.join(q, w + ".mp4"))
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "%.2f" % s, "-to", "%.2f" % e, "-i", os.path.join(q, w + ".mp4"), "-vf", "scale=360:270", *ENC,
-                        os.path.join(z, w.upper() + ".mp4")], check=True)
+    for ident, w, datei in eintraege:
+        if a.nur_neue and os.path.exists(os.path.join(z, ident.upper() + ".mp4")) and os.path.exists(os.path.join(z, "FA_" + ident.upper() + ".mp4")):
+            continue
+        s, e = wort_abschnitt(os.path.join(q, datei + ".mp4"))
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-ss", "%.2f" % s, "-to", "%.2f" % e, "-i", os.path.join(q, datei + ".mp4"), "-vf", "scale=360:270", *ENC,
+                        os.path.join(z, ident.upper() + ".mp4")], check=True)
         with tempfile.TemporaryDirectory() as t:
             teile = []
             for k, c in enumerate(zeichen(w)):
@@ -76,7 +87,7 @@ def main():
                                 "-vf", "crop=%d:%d:%d:%d,scale=360:270" % (HAND[2], HAND[3], HAND[0], HAND[1]), *ENC, p], check=True)
                 teile.append(p)
             liste = os.path.join(t, "liste.txt"); open(liste, "w").write("".join("file '%s'\n" % p for p in teile))
-            subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", liste, "-c", "copy", os.path.join(z, "FA_" + w.upper() + ".mp4")], check=True)
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", liste, "-c", "copy", os.path.join(z, "FA_" + ident.upper() + ".mp4")], check=True)
         print("%-10s Gebärde %.1f–%.1f s · Fingeralphabet %s" % (w, s, e, "-".join(zeichen(w))))
 
 
