@@ -192,3 +192,8 @@ body.esc-an #flocken{display:none}
 .pulsiert{animation:pulsiert 1.4s ease-in-out infinite}
 @keyframes pulsiert{50%{box-shadow:0 4px 0 var(--tinte),0 0 0 8px rgba(255,210,87,.75)}}
 @media (prefers-reduced-motion:reduce){.pulsiert{animation:none;outline:5px solid #ffd257}}
+/* ---- Gebärdenvideo in der App ---- */
+#clipBox{position:fixed;inset:0;z-index:55;display:grid;place-items:center;background:rgba(6,9,24,.8);padding:12px}
+.clipkarte{width:min(1000px,96vw);padding:10px 12px 12px}
+.clipkopf{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:22px}
+#clipVideo{width:100%;max-height:78vh;border-radius:10px;background:#000;display:block}
