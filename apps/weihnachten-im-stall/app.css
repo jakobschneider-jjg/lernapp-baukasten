@@ -193,7 +193,10 @@ body.esc-an #flocken{display:none}
 @keyframes pulsiert{50%{box-shadow:0 4px 0 var(--tinte),0 0 0 8px rgba(255,210,87,.75)}}
 @media (prefers-reduced-motion:reduce){.pulsiert{animation:none;outline:5px solid #ffd257}}
 /* ---- Gebärdenvideo in der App ---- */
-#clipBox{position:fixed;inset:0;z-index:55;display:grid;place-items:center;background:rgba(6,9,24,.8);padding:12px}
-.clipkarte{width:min(1000px,96vw);padding:10px 12px 12px}
-.clipkopf{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:22px}
-#clipVideo{width:100%;max-height:78vh;border-radius:10px;background:#000;display:block}
+#clipBox{position:fixed;z-index:55;background:var(--papier);border:3px solid var(--tinte);border-radius:16px;box-shadow:0 6px 0 var(--tinte),0 10px 30px rgba(0,0,0,.45);padding:0 8px 8px;min-width:240px}
+.clipkopf{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font-size:20px}
+.clipkopf b{flex:1}
+.clipkopf .iconbtn{width:44px;height:44px}
+.clipgriffe{font-size:26px;color:#8a8f99;line-height:1}
+#clipVideo{width:100%;height:auto;border-radius:10px;background:#000;display:block}
+.clipecke{position:absolute;right:-6px;bottom:-6px;width:44px;height:44px;touch-action:none;cursor:nwse-resize;background:linear-gradient(135deg,transparent 0 46%,var(--tinte) 46% 54%,transparent 54% 62%,var(--tinte) 62% 70%,transparent 70%);border-radius:0 0 14px 0}
