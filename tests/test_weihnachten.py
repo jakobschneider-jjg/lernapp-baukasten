@@ -121,8 +121,16 @@ async def teil1():
         await pg.click('#taskBack'); ck('Zurück aus Aufgabe → Tür-Seite', await scr(pg) == 'door'); await pg.click('#tuerZurueck'); ck('Zurück → Kalender', await scr(pg) == 'start')
         # Gebärden-Video ohne Adresse: Hinweis
         await pg.evaluate("()=>{window.OFFEN=[];window.open=u=>{OFFEN.push(u);return {}}}")
-        await pg.click('.ktuer[data-n="2"]'); await pg.click('#btnDgs'); u = await pg.evaluate("OFFEN[0]||''")
-        ck('Video-Knopf öffnet das Gebärden-Video', u.startswith('https://youtu.be/') and 't=' in u, u); await pg.click('#tuerZurueck')
+        await pg.click('.ktuer[data-n="2"]')
+        if await pg.evaluate("typeof VIDEO !== 'undefined'"):   # Klassen-Fassung: Schnipsel in der App
+            await pg.click('#btnDgs'); await pg.wait_for_timeout(400)
+            src = await pg.evaluate("(document.getElementById('clipVideo')||{}).src||''")
+            ck('Video-Knopf spielt den Schnipsel in der App (kein Link nach außen)', src.startswith('blob:') and await pg.evaluate("OFFEN.length") == 0, src)
+            await pg.click('#clipZu'); ck('Video schließt', await pg.locator('#clipBox').count() == 0)
+        else:
+            ck('Weitergabe-Fassung: kein Video-Knopf', await pg.locator('#btnDgs').count() == 0)
+        await pg.click('#tuerZurueck')
+        await pg.click('.ktuer[data-n="4"]'); ck('Tür 4 (Wiederholung) ohne Video-Knopf', await pg.locator('#btnDgs').count() == 0); await pg.click('#tuerZurueck')
         # Neuladen: Stand bleibt
         await pg.reload(); await pg.wait_for_timeout(300)
         ck('nach Neuladen: 12 Türen fertig, Stufe 1', await pg.locator('.ktuer.fertig').count() == 12 and await pg.evaluate("S.level") == 's1')
@@ -176,7 +184,11 @@ async def open_lv(p, cfg):
     await pg.goto("https://learningview.org/mock")
     await pg.evaluate("cfg=>setup(cfg)", cfg)
     await pg.wait_for_timeout(600)
-    fr = [f for f in pg.frames if "content.test" in f.url][0]
+    for _ in range(60):   # große Klassen-Fassung (Videos) lädt länger
+        fs = [f for f in pg.frames if "content.test" in f.url]
+        if fs and await fs[0].evaluate("typeof LV !== 'undefined'"): break
+        await pg.wait_for_timeout(500)
+    fr = fs[0]
     return b, pg, fr, errs
 async def types(pg):
     out = []
