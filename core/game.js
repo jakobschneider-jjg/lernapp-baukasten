@@ -40,6 +40,13 @@ function scoreScaled() {
   const tot = ORDER().reduce((a, l) => a + levelTotalAll(l), 0);
   return Math.min(1, ORDER().reduce((a, l) => a + starsOf(S, l), 0) / Math.max(1, tot));
 }
+/* Fehlerablauf. Standard: 1. Fehler → Hilfe (Antworten gesperrt), 2. Fehler → Lösung.
+   APP.errorFlow = "stufen" (Erprobung, Nov. 2026): 1. Fehler → Wartezeit mit Zeitbalken, dann neuer Versuch;
+   2. Fehler → Hilfe ist Pflicht; 3. Fehler → Lösung. Stern nur im 1. oder 2. Versuch ohne Hilfe, nichts wird ausgegraut.
+   Bei zwei Antworten und in der Schiene gilt der Standard (sonst wäre der 2. Versuch geschenkt). */
+const WAIT_STEPS = [3000, 5000, 8000];
+function waitMs() { return S.waitMs || APP.errorWait || 5000; }
+function stufenFlow(t) { return APP.errorFlow === "stufen" && !(S.track && APP.track) && !(t.answers && t.answers.length <= 2); }
 function stat(level) { S.stats[level] = S.stats[level] || { n: 0, first: 0, hint: 0, sol: 0 }; return S.stats[level]; }
 
 function badgeSVG(mid, big) {
@@ -112,13 +119,13 @@ function renderMap() {
 let M = null;
 function startMission(mid) { const tasks = APP.buildTasks(S.level, mid); M = { mid, tasks, base: tasks.length, i: 0, stars: 0, res: [], err: 0 }; go("task"); renderTask(); }
 function renderDots() {
-  $("pdots").innerHTML = M.tasks.map((t, i) => { const r = M.res[i]; return '<span class="dot ' + (r === "s" ? "s" : r === "d" ? "d" : r === "r" ? "r" : "") + (t.again ? " again" : "") + '" style="' + (i === M.i ? "outline:3px solid var(--accent);outline-offset:2px" : "") + '"></span>'; }).join("");
+  $("pdots").innerHTML = M.tasks.map((t, i) => { const r = M.res[i]; return '<span class="dot ' + (r === "s" ? "s" : r === "d" ? "d" : r === "r" ? "r" : r === "h" ? "h" : "") + (t.again ? " again" : "") + '" style="' + (i === M.i ? "outline:3px solid var(--accent);outline-offset:2px" : "") + '"></span>'; }).join("");
   $("taskStars").textContent = totalStars(S.level) + M.stars;
 }
 function uniqueUrl(u) { const h = u.indexOf("#"), base = h < 0 ? u : u.slice(0, h), hash = h < 0 ? "" : u.slice(h); return base + (base.includes("?") ? "&" : "?") + "t=" + Date.now() + hash; }
 
 function renderTask() {
-  const t = M.tasks[M.i]; let tries = 0;
+  const t = M.tasks[M.i]; let tries = 0; const flow3 = stufenFlow(t);
   M.cur = null; M.sel = null;
   renderDots();
   const fb = $("fb"); fb.className = "fb"; fb.innerHTML = "";
@@ -145,16 +152,23 @@ function renderTask() {
     }
   }
   function good(node) {
-    node.classList.add("right"); M.locked = true;
-    if (!t.again) { M.stars++; M.res[M.i] = "s"; const st = stat(S.level); st.n++; if (tries === 0) st.first++; } else M.res[M.i] = "r";
+    node.classList.add("right"); M.locked = true; clearTimeout(M.wt); ans.classList.remove("locked", "dim");
+    const star = !t.again && !(flow3 && tries >= 2); /* Stufen-Ablauf: nach der Pflicht-Hilfe gelöst = ohne Stern */
+    if (!t.again) { if (star) M.stars++; M.res[M.i] = star ? "s" : "h"; const st = stat(S.level); st.n++; if (tries === 0) st.first++; } else M.res[M.i] = "r";
     renderDots(); burst(node);
-    showFb("good", '<span class="fbicon">' + (t.again ? ICON.ok : ICON.star) + '</span><span class="grow">Richtig!' + (t.goodText ? " " + t.goodText : "") + '</span>');
+    showFb("good", '<span class="fbicon">' + (star ? ICON.star : ICON.ok) + '</span><span class="grow">Richtig!' + (t.goodText ? " " + t.goodText : "") + '</span>');
   }
   function bad(node, grey) {
     tries++; M.err++; node.classList.add("shake"); setTimeout(() => node.classList.remove("shake"), 400);
-    if (grey) node.classList.add("wrong");
-    if (!t.again) { const st = stat(S.level); if (tries === 1) st.hint++; if (tries === 2) { st.sol++; st.n++; } }
-    if (tries < 2) { runHint(); return; }
+    if (flow3) {
+      if (!t.again) { const st = stat(S.level); if (tries === 2) st.hint++; if (tries === 3) { st.sol++; st.n++; } }
+      if (tries === 1) { waitHint(ICON.eye, APP.waitText || "Schau noch einmal genau.", waitMs()); return; }
+      if (tries === 2) { if (t.hint) runHint(); else waitHint(ICON.eye, "", waitMs()); return; }
+    } else {
+      if (grey) node.classList.add("wrong");
+      if (!t.again) { const st = stat(S.level); if (tries === 1) st.hint++; if (tries === 2) { st.sol++; st.n++; } }
+      if (tries < 2) { runHint(); return; }
+    }
     M.locked = true; M.res[M.i] = t.again ? "r" : "d"; clearTimeout(M.wt);
     ans.classList.remove("locked", "dim");
     if (t.build) { M.cur = t.build.answer.slice(); drawBuild(true); }
@@ -169,7 +183,7 @@ function renderTask() {
     ans.querySelectorAll(".ans").forEach(btn => btn.onclick = () => {
       if (M.locked || ans.classList.contains("locked")) return;
       if (btn.dataset.v === answer) good(btn);
-      else bad(btn, ans.querySelectorAll(".ans").length > 2); /* bei zwei Antworten bleiben beide: sonst wäre der 2. Versuch geschenkt */
+      else bad(btn, ans.querySelectorAll(".ans").length > 2); /* bei zwei Antworten bleiben beide: sonst wäre der 2. Versuch geschenkt; im Stufen-Ablauf wird nie ausgegraut */
     });
   }
   /* Bau-Aufgabe: t.build = { n, answer:[…], view(arr, {sel, solution}) -> HTML mit [data-slot],

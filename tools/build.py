@@ -14,6 +14,7 @@ Aufruf:
   --images Lokaler Ordner mit lizenzierten App-Bildern (NAME.png); eingebettet für imgSrc('NAME'). Nie ins Repository.
   --videos Lokaler Ordner mit Gebärdenvideos (NAME.mp4/.mov); eingebettet für signVid('NAME'), verkleinert auf
            640 × 360 ohne Ton (ffmpeg). Nie ins Repository (Personen im Bild, Lizenzen).
+  --video-size  Größe der eingebetteten Videos (Standard 640x360; 360x270 für 4:3-Aufnahmen wie gebaerdenlernen.de)
   --no-signs  Gebärdenfelder ganz weglassen (Fassung zum Weitergeben ohne lizenzierte Gebärdenbilder)
 
 Prüfungen: alle Platzhalter ersetzt, Syntaxprüfung mit node --check, fehlende Gebärden werden gemeldet.
@@ -71,12 +72,13 @@ def find_video(folder, word):
     return None
 
 
-def video_data(path):
-    """Video auf 640×360 ohne Ton verkleinern (H.264, CRF 26) und als data:-URL zurückgeben."""
+def video_data(path, size="640x360"):
+    """Video auf size (Standard 640×360) ohne Ton verkleinern (H.264, CRF 26) und als data:-URL zurückgeben."""
+    vw, vh = size.split("x")
     with tempfile.TemporaryDirectory() as t:
         o = os.path.join(t, "v.mp4")
         try:
-            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", path, "-an", "-vf", "scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2,fps=30",
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", path, "-an", "-vf", "scale=%s:%s:force_original_aspect_ratio=decrease,pad=%s:%s:(ow-iw)/2:(oh-ih)/2,fps=30" % (vw, vh, vw, vh),
                             "-c:v", "libx264", "-profile:v", "main", "-level", "3.1", "-pix_fmt", "yuv420p", "-preset", "slow", "-crf", "26",
                             "-movflags", "+faststart", o], check=True)
         except FileNotFoundError:
@@ -92,6 +94,7 @@ def main():
     ap.add_argument("--out", help="Zieldatei")
     ap.add_argument("--images", help="lokaler Ordner mit lizenzierten App-Bildern (NAME.png), eingebettet für imgSrc('NAME')")
     ap.add_argument("--videos", help="lokaler Ordner mit Gebärdenvideos (NAME.mp4/.mov), eingebettet für signVid('NAME') – verkleinert auf 640×360, ohne Ton")
+    ap.add_argument("--video-size", default="640x360", help="Größe der eingebetteten Videos, z. B. 360x270 für 4:3-Aufnahmen (Standard 640x360)")
     ap.add_argument("--no-signs", action="store_true", help="Gebärdenfelder ganz weglassen (z. B. Fassung zum Weitergeben)")
     a = ap.parse_args()
 
@@ -108,6 +111,8 @@ def main():
     if code is None:
         code = "".join(secrets.choice("0123456789") for _ in range(4))
         print("Hinweis: kein --code angegeben. Zufälliger Lehrkraft-Code:", code)
+    if not re.fullmatch(r"\d{2,4}x\d{2,4}", a.video_size):
+        sys.exit("Fehler: --video-size muss die Form BREITExHÖHE haben, z. B. 360x270.")
     if not re.fullmatch(r"\d{4,8}", code):
         sys.exit("Fehler: --code muss aus 4–8 Ziffern bestehen.")
 
@@ -148,13 +153,14 @@ def main():
             if p: images[w] = image_data(p)
             else: imissing.append(w)
     # Gebärdenvideos: signVid('NAME') im Inhalt; nur mit --videos aus lokalem Ordner (nie im Repository)
-    vnames = sorted(set(re.findall(r"signVid\(\s*[\"']([A-Z0-9_ÄÖÜ]+)[\"']", scan)))
+    # auch als Feld vid: "NAME" / vidXyz: "NAME" (für signVid(T.vid) mit Namen aus einer Tabelle)
+    vnames = sorted(set(re.findall(r"signVid\(\s*[\"']([A-Z0-9_ÄÖÜ]+)[\"']", scan)) | set(re.findall(r"\bvid\w*:\s*[\"']([A-Z0-9_ÄÖÜ]+)[\"']", scan)))
     videos, vmissing = {}, []
     if a.videos:
         folder = os.path.expanduser(a.videos)
         for w in vnames:
             p = find_video(folder, w)
-            if p: videos[w] = video_data(p)
+            if p: videos[w] = video_data(p, a.video_size)
             else: vmissing.append(w)
     signs_js = "const VIDEOS=" + json.dumps(videos) + ";" + "const SIGNS=" + json.dumps(signs, ensure_ascii=False) + ";const SIGNS_OFF=" + ("true" if a.no_signs else "false") + ";const IMAGES=" + json.dumps(images, ensure_ascii=False) + ";"
 

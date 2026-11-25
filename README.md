@@ -41,6 +41,8 @@ core/        gemeinsamer Code (nicht pro App ändern)
 apps/
   beispiel-formen/content.js   Beispiel-App „Formen-Profi“ = Vorlage
   rhythmus/content.js, app.css Rhythmus-Trainer (Tiernotation → Trommelraster, Mitspielen, „Das kann ich“-Karte)
+  lesewerkstatt/               Prototyp Leselern-App „Lesewerkstatt: Tiere“ (Gebärde ↔ Bild ↔ Wort ↔ Fingeralphabet, Kreidestil,
+                               gestufter Fehlerablauf). src/ bearbeiten, dann zusammensetzen.py → content.js; Videos mit videos_vorbereiten.py
 tools/build.py                 baut dist/<app>.html
 tests/                         Klicktests (Playwright), LearningView-Nachbau
 run_all.sh                     baut die Beispiel-App und führt alle Tests aus
@@ -66,6 +68,8 @@ python3 tests/test_learningview.py dist/meine-app.html                  # 4. pr�
 * `--videos` – **lokaler** Ordner mit Gebärdenvideos `NAME.mp4/.mov`. Eingebettet werden nur Namen, die im Inhalt als
   `signVid('NAME', …)` vorkommen; build.py verkleinert sie mit ffmpeg auf 640 × 360 ohne Ton (ca. 30–60 KB pro Sekunde).
   Fehlt ein Video, erscheint der Ersatz.
+* `--video-size` – Größe der eingebetteten Videos (Standard `640x360`; `360x270` für 4:3-Aufnahmen wie gebaerdenlernen.de).
+  Videonamen werden auch aus Feldern `vid: "NAME"` / `vidFa: "NAME"` gelesen (für `signVid(T.vid)` mit Namen aus einer Tabelle).
 * `--no-signs` – Gebärdenfelder ganz weglassen (keine Platzhalter). Für eine **Fassung zum Weitergeben**, die keine
   lizenzierten Bilder enthalten darf.
 * Ergebnis: `dist/<id>.html` (Ordner `dist/` wird nicht eingecheckt).
@@ -115,6 +119,10 @@ Haken für Apps mit eigenem Aufbau (alle optional, Beispiel: `apps/weihnachten-i
 * `route(id)` / `onScreen(id)` – Bildschirmwechsel umleiten (z. B. `"map"` auf einen eigenen Bildschirm) und eigene Bildschirme zeichnen.
 * `score(S)` – eigener Kachel-Wert (0–1); `reached(S)` – eigener Text in der Spalte „Stand“ der Klassenübersicht.
 * `teacher: { html(), wire(root), render(root) }` – eigene Schalter im Lehrkraft-Bereich; `unlockAllLabel`, `keepOnReset: ["level"]`.
+* `errorFlow: "stufen"` – **gestufter Fehlerablauf (Erprobung, Nov. 2026)**: 1. Fehler → Zeitbalken (Wartezeit `errorWait`,
+  Standard 5 s, im Lehrkraft-Bereich 3/5/8 s), dann neuer Versuch; 2. Fehler → Hilfe ist Pflicht; 3. Fehler → Lösung, kommt am Ende
+  nochmal. Stern nur im 1./2. Versuch ohne Hilfe, nichts wird ausgegraut. Bei zwei Antworten und in der Schiene gilt der Standard.
+  `waitText` = Text beim Zeitbalken. Ohne `errorFlow` bleibt alles wie bisher.
 * `classExtra(box, rows)` – eigener Bereich über der Tabelle der Klassenübersicht (z. B. Klassenhimmel). `rows` kommt von LearningView: Namen nur per `textContent` einsetzen, nichts davon speichern.
 
 ### Aufgabe
@@ -198,7 +206,9 @@ aus dem Elternfenster an und schreibt Namen aus LearningView nur als Text (nie a
 * `tests/test_video.py <html> <code>` – Gebärdenvideo: läuft stumm in der Frage, großes Fenster (verschieben, Größe, Pause,
   Langsam), bleibt bei der nächsten Aufgabe, schließt beim Verlassen, Schalter aus → Ersatz, Löschen behält den Schalter.
   run_all.sh erzeugt dafür ein Testbild-Video mit ffmpeg.
-* `tests/test_learningview.py <html>` – für jede App nutzbar (wählt selbst Auswahl-Missionen der ersten Stufe):
+* `tests/test_lesewerkstatt.py <html> <code> [bildordner]` – Lesewerkstatt: gestufter Fehlerablauf (Wartezeit, Pflicht-Hilfe,
+  Lösung, Sterne), Wartezeit-Schalter, alle Missionen, Lexikon, Tafel, Videos an/aus.
+* `tests/test_learningview.py <html>` – für jede App nutzbar (auch ohne Schiene) (wählt selbst Auswahl-Missionen der ersten Stufe):
   nachgebautes LearningView (Herkunft `https://learningview.org`, sandbox-iframe):
   Schüler-Modus, Neuladen, Speicherfehler, Einzelansicht, Klassenübersicht (inkl. HTML in Namen, kaputte Daten,
   abgelehnte Freigabe), Vorschau, keine Antwort, fremde Nachrichten.
