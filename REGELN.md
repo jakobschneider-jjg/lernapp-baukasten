@@ -77,6 +77,11 @@ Neue Erfahrungen hier ergänzen – mit Datum und Quelle (z. B. „Reflexion Geo
 
 ## Offene Fragen (bitte bei Gelegenheit testen)
 
+* **Gestufter Fehlerablauf** (`APP.errorFlow = "stufen"`, Wunsch Jakob 25.11.2026, in Erprobung mit der Lesewerkstatt):
+  1. Fehler → Wartezeit mit Zeitbalken, 2. Fehler → Pflicht-Hilfe, 3. Fehler → Lösung; Stern nur im 1./2. Versuch ohne Hilfe;
+  nichts ausgrauen; bei zwei Antworten und in der Schiene der bisherige Ablauf. Beobachten: Bremst die Wartezeit das Raten?
+  Wird die Pflicht-Hilfe angenommen? Welche Wartezeit passt (3/5/8 s)? Danach entscheiden, ob er Regel 3 ersetzt.
+
 * ~~Bleiben Lernstände erhalten, wenn an derselben LearningView-Aufgabe eine neue HTML-Version angehängt wird?~~
   **Geklärt (15.11.2026, Test durch Jakob mit Testschüler):** Ja. `APP.id` nicht ändern und das Zustandsformat
   abwärtskompatibel halten (neue Stufen, Missionen und Felder ergänzen ist unkritisch); nach dem Austausch neu freigeben.

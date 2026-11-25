@@ -14,6 +14,7 @@ function buildTeacher() {
   if (APP.teacher && APP.teacher.html) h += '<div id="appTeach">' + APP.teacher.html() + '</div>'; /* eigene Schalter der App */
   Object.entries(APP.locks || {}).forEach(([id, L]) => { h += switchHTML("swLock_" + id, L.switchLabel || (L.label + " öffnen")); });
   if (hasVideos()) h += switchHTML("swVid", APP.videoSwitchLabel || "Gebärdenvideos");
+  if (APP.errorFlow === "stufen") h += '<button class="switch" id="swWait"><span class="lbl" id="swWaitL"></span></button>';
   if (APP.track) h += switchHTML("swTrack", APP.track.switchLabel || (APP.track.label + " auf diesem Gerät"));
   $("switches").innerHTML = h;
   /* Codes zum Zeigen an der Tafel (nur nach Lehrkraft-Code sichtbar) */
@@ -26,6 +27,9 @@ function buildTeacher() {
   }));
   if (hasVideos()) $("swVid").addEventListener("click", () => {
     S.vidOff = !S.vidOff; save(); renderSwitches(); toast(S.vidOff ? "Gebärdenvideos aus." : "Gebärdenvideos an.");
+  });
+  if (APP.errorFlow === "stufen") $("swWait").addEventListener("click", () => {
+    const i = WAIT_STEPS.indexOf(waitMs()); S.waitMs = WAIT_STEPS[(i + 1) % WAIT_STEPS.length]; save(); renderSwitches(); toast("Wartezeit nach dem 1. Fehler: " + waitMs() / 1000 + " s");
   });
   if (APP.track) $("swTrack").addEventListener("click", () => {
     S.track = !S.track; save(); sendScore(); renderSwitches(); toast(S.track ? APP.track.label + " an: Startseite zeigt nur diese Schiene." : APP.track.label + " aus.");
@@ -45,21 +49,23 @@ function buildTeacher() {
   $("closeInfo").addEventListener("click", closeInfo);
   $("resetAll").addEventListener("click", () => { $("resetYes").hidden = false; });
   $("resetYes").addEventListener("click", () => {
-    const keep = { track: S.track, vidOff: S.vidOff }; (APP.keepOnReset || []).forEach(k => { keep[k] = S[k]; }); applyState(keep); save(); sendScore(); $("resetYes").hidden = true; renderSwitches(); toast("Fortschritt gelöscht.");
+    const keep = { track: S.track, vidOff: S.vidOff, waitMs: S.waitMs }; (APP.keepOnReset || []).forEach(k => { keep[k] = S[k]; }); applyState(keep); save(); sendScore(); $("resetYes").hidden = true; renderSwitches(); toast("Fortschritt gelöscht.");
   });
   $("infoTitle").textContent = APP.title + " · Lehrkraft";
-  $("infoBody").innerHTML = (APP.info || "") + GENERIC_INFO;
+  $("infoBody").innerHTML = (APP.info || "") + (APP.errorFlow === "stufen" ? GENERIC_INFO.replace(/<p><b>Sterne:<\/b>.*?<\/p>/, STUFEN_INFO) : GENERIC_INFO);
 }
 const GENERIC_INFO =
   '<p><b>Freischalten:</b> Die nächste Stufe öffnet sich mit einem festen Anteil der Sterne der vorigen Stufe. Einmal offen bleibt offen. Es zählt der beste Durchgang je Mission.</p>' +
   '<p><b>Sterne:</b> 1 Stern pro Aufgabe, wenn sie im 1. oder 2. Versuch gelöst wird. Nach dem 1. Fehler sind die Antworten gesperrt, bis die Hilfe genutzt wurde. Nach dem 2. Fehler zeigt die App die Lösung; die Aufgabe kommt am Ende der Mission noch einmal (ohne Stern).</p>' +
   '<p><b>Speichern:</b> In LearningView speichert die App den Lernstand dort (Abgabeform „keine“). Außerhalb nur auf diesem Gerät. Gespeichert werden nur Sterne, Abzeichen, Schalter und Zähler – keine Namen, keine freien Texte.</p>';
+const STUFEN_INFO = '<p><b>Sterne und Fehler (Erprobung):</b> 1 Stern pro Aufgabe, wenn sie im 1. oder 2. Versuch ohne Hilfe gelöst wird. Nach dem 1. Fehler läuft ein Zeitbalken ab (Wartezeit hier einstellbar), dann folgt ein neuer Versuch. Nach dem 2. Fehler ist die Hilfe Pflicht. Nach dem 3. Fehler zeigt die App die Lösung; die Aufgabe kommt am Ende ohne Stern noch einmal. Falsche Antworten werden nicht ausgegraut. Bei zwei Antworten und in der Schiene gilt der gewohnte Ablauf (Hilfe nach dem 1. Fehler, Lösung nach dem 2.).</p>';
 function renderPin() { $("pinShow").innerHTML = TEACH_CODE.split("").map((_, i) => '<i class="' + (i < pin.length ? "f" : "") + '"></i>').join(""); }
 function renderSwitches() {
   $("swAll").classList.toggle("on", !!S.unlockAll);
   Object.keys(APP.locks || {}).forEach(id => $("swLock_" + id).classList.toggle("on", !!S.locksOpen[id]));
   if (APP.track) $("swTrack").classList.toggle("on", !!S.track);
   if (hasVideos()) $("swVid").classList.toggle("on", !S.vidOff);
+  if (APP.errorFlow === "stufen") $("swWaitL").textContent = "Wartezeit nach dem 1. Fehler: " + waitMs() / 1000 + " s (antippen zum Ändern)";
   if (APP.teacher && APP.teacher.render) APP.teacher.render($("appTeach"));
 }
 function openInfo() { $("lvStore").textContent = lvStorageText(); pin = ""; $("teachLock").hidden = false; $("teachOpen").hidden = true; $("resetYes").hidden = true; $("toast").textContent = ""; renderPin(); $("info").hidden = false; }
