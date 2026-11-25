@@ -3,6 +3,32 @@
    Nutzt FIG und Z() aus frei/kreide.js. Raster 400 × 400, x,y = Fußpunkt.
    ========================================================================== */
 const FIG_LW = {
+  maus(z, x, y, k) {   /* Seitenansicht: große runde Ohren, spitze Nase, Schnurrhaare, langer Schwanz */
+    const f = "#9aa1ad", d = "#7b8290";
+    z.path("M" + (x - 80 * k) + " " + (y - 40 * k) + " q-60 10 -80 -30 q-14 -30 10 -50", { strokeWidth: 6, stroke: "#e8a0a8" });   /* Schwanz */
+    [-40, -10, 30, 56].forEach(e => z.line(x + e * k, y - 20 * k, x + e * k + 4, y, { strokeWidth: 6, stroke: "#e8a0a8" }));
+    z.path("M" + (x - 90 * k) + " " + (y - 30 * k) + " Q" + (x - 80 * k) + " " + (y - 130 * k) + " " + (x + 20 * k) + " " + (y - 120 * k)
+      + " Q" + (x + 110 * k) + " " + (y - 110 * k) + " " + (x + 140 * k) + " " + (y - 50 * k) + " Q" + (x + 60 * k) + " " + (y - 14 * k) + " " + (x - 90 * k) + " " + (y - 30 * k) + " Z", { fill: f, fillStyle: "solid" });
+    z.mal("ellipse", [x - 4 * k, y - 66 * k, 170 * k, 70 * k], [f, d]);
+    z.circ(x + 46 * k, y - 132 * k, 74 * k, { fill: f, fillStyle: "solid" }); z.circ(x + 46 * k, y - 132 * k, 44 * k, { fill: "#f4b6c0", fillStyle: "solid", stroke: "none" });   /* Ohr */
+    z.circ(x + 140 * k, y - 52 * k, 16 * k, { fill: "#e2546b", fillStyle: "solid", strokeWidth: 2 });   /* Nase */
+    z.circ(x + 92 * k, y - 82 * k, 12 * k, { fill: C.ink, fillStyle: "solid" });
+    [[-10, -8], [0, 0], [10, 8]].forEach(([a, b]) => { z.line(x + 128 * k, y - 50 * k + a * k, x + 190 * k, y - 62 * k + b * 2 * k, { strokeWidth: 2 }); });
+  },
+  hund(z, x, y, k) {   /* hellbraun, Schlappohr, lange Schnauze, Zunge, Halsband, Schwanz hoch */
+    const f = "#c98a4b", d = "#9a6230";
+    z.path("M" + (x - 80 * k) + " " + (y - 80 * k) + " q-30 -40 -10 -90", { strokeWidth: 12, stroke: d });   /* Schwanz */
+    [-60, -34, 30, 56].forEach(e => z.line(x + e * k, y - 50 * k, x + e * k, y, { strokeWidth: 14, stroke: d }));
+    z.ell(x, y - 80 * k, 180 * k, 84 * k, { fill: f, fillStyle: "solid" });
+    z.mal("ellipse", [x, y - 80 * k, 170 * k, 74 * k], [f, d]);
+    z.ell(x + 96 * k, y - 140 * k, 92 * k, 84 * k, { fill: f, fillStyle: "solid" });   /* Kopf */
+    z.ell(x + 150 * k, y - 124 * k, 74 * k, 44 * k, { fill: "#e0b483", fillStyle: "solid" });   /* Schnauze */
+    z.circ(x + 184 * k, y - 132 * k, 20 * k, { fill: C.ink, fillStyle: "solid" });   /* Nase */
+    z.path("M" + (x + 150 * k) + " " + (y - 104 * k) + " q8 30 22 0", { fill: "#e2546b", fillStyle: "solid", strokeWidth: 2.4 });   /* Zunge */
+    z.ell(x + 70 * k, y - 120 * k, 36 * k, 78 * k, { fill: "#6b3f1c", fillStyle: "solid" });   /* Schlappohr */
+    z.circ(x + 108 * k, y - 156 * k, 12 * k, { fill: C.ink, fillStyle: "solid" });
+    z.line(x + 56 * k, y - 96 * k, x + 104 * k, y - 92 * k, { strokeWidth: 9, stroke: "#d8432f" });   /* Halsband */
+  },
   katze(z, x, y, k) {
     const f = "#e8913a", d = "#b9661f";
     z.path("M" + (x - 70 * k) + " " + (y - 40 * k) + " q-60 -10 -50 -90 q4 -24 18 -10", { strokeWidth: 12, stroke: d });   /* Schwanz */
@@ -79,9 +105,9 @@ const FIG_LW = {
 
 /* Bildwörter: Wort, Gebärdenvideo-Name, Zeichnung (Raster 400 × 400) */
 const TIERE = {
-  hund: { w: "Hund", d: z => FIG.hund(z, 150, 330, 2.1) },
+  hund: { w: "Hund", d: z => FIG_LW.hund(z, 150, 345, 1.05) },
   katze: { w: "Katze", d: z => FIG_LW.katze(z, 150, 340, 1.15) },
-  maus: { w: "Maus", d: z => FIG.maus(z, 170, 300, 6) },
+  maus: { w: "Maus", d: z => FIG_LW.maus(z, 175, 320, 1.1) },
   kuh: { w: "Kuh", d: z => FIG.kuh(z, 150, 350, 1.25) },
   pferd: { w: "Pferd", d: z => FIG.pferd(z, 150, 375, 1.2) },
   schaf: { w: "Schaf", d: z => FIG.schaf(z, 175, 330, 2.6) },
